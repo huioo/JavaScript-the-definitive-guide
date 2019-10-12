@@ -481,3 +481,309 @@ a.shift();                   // a:[]; return 1
  * Array.toString()        该方法将其每个元素转化为字符串并输出用逗号分隔的字符串列表。输出不包括方括号和其他任何形式的包裹数组值得分隔符。
  * Array.toLocalString()   
  */
+[1,2,3].toString();          // "1,2,3"
+["a", "b", "c"].toString();  // "a,b,c"
+[1, [2, 'c']].toString();    // "1,2,c"
+
+
+
+/**
+ * ECMAScript 5 中的数组方法
+ * 
+ * 9个新的数组方法来遍历、映射、过滤、检测、简化和搜索数组。
+ * 
+ * 大多数方法的第一个参数接收一个函数，并且对数组的每一个元素（或一些元素）调用一次该函数。如果是稀疏数组，对不存在的元素不调用传递的函数。
+ * 在大多数情况下，调用提供的函数使用3个参数：数组元素、元素的索引和数组本身。通常，只需要第一个参数值，可以忽略后两个参数。
+ * 
+ * 大多数ECMAScript 5数组方法的第一个参数是一个函数，第二个参数是可选的。如果有第二个参数，则调用的函数被看作是第二个参数的方法。
+ * 也就是说，在调用函数时传递进去的第二个参数作为它的this关键字的值来使用。被调用的函数的返回值非常重要，但是不同的方法处理返回值的方式不一样。
+ * 
+ * 这些方法都不会修改它们调用的原始数组。当然，传递给这些方法的函数是可以修改这些数组的。
+ */
+
+/**
+  * Array.forEach()  遍历数组，为每个函数调用指定的函数。
+  */
+var data = [1,2,3,4,5];
+var sum = 0;
+data.forEach(function(val, idx, ay){
+    sum += val;
+});
+sum;                                    // 15；求和
+data.forEach(function(v, i, a){
+    a[i] = v+1;
+});
+data;                                   // [2, 3, 4, 5, 6]；数组元素的值加1
+/**
+ * 注意，在所有元素都传递给调用的函数之前，Array.forEach()无法终止遍历。也就是说，没有像for循环中使用的相应的break语句。
+ * 如果要提前终止，必须把forEach()方法放在一个try块中，并能抛出一个异常。
+ * 如果forEach()方法调用的函数抛出foreach.break异常，循环会提前终止。
+ */
+function foreach(a, f, t){
+    try{
+        a.forEach(f, t)
+    }
+    catch(e){
+        if (e === foreach.break) return;
+        else throw e;
+    }
+}
+foreach.break = new Error("StopIteration");
+
+/**
+ * Array.map()   将调用的数组的每个元素传递给指定的函数，并返回一个数组，它包含该函数的返回值。
+ *     传递给map()方法的函数的调用方式和传递给forEach()的函数的调用方式一致。但map()中的函数应该有返回值。
+ *     map()方法返回的是新数组，它不修改调用的数组。如果是稀疏数组，返回的也是相同方式的稀疏数组，同样的长度，同样的缺失元素。
+ */
+a = [1,2,3];
+b = a.map(function(v,i,a){ return v*v; });      // [1,4,9]
+
+/**
+ * Array.filter()  返回的数组元素是调用的数组的一个子集。传递的函数是用来逻辑判断的，该函数返回true或false。
+ *     调用判定函数就像调用forEach()和map()一样。如果返回值为true或能转化为true的值，那么传递给判定函数的元素就是子集的成员。
+ */
+a = [5,4,3,2,1];
+smallvalues = a.filter(function(v,i,a){ return v<3; });   // [2,1]
+everyother = a.filter(function(v,i,a){ return i%2 == 0; }); // [5,3,1]
+/**
+ * 注意，Array.filter()方法会跳过稀疏数组中缺少的元素，它的返回数组总是稠密的。
+ */
+var sparse = [0,1,,null,,5,6, undefined];
+var dense = sparse.filter(function(v,i,a){ return true; });  // [0, 1, null, 5, 6, undefined]；压缩稀疏数组的空缺
+a = sparse.filter(function(v,i,a){ return v !== undefined && v!= null; }); // [0, 1, 5, 6]；压缩空缺并删除undefined和null元素
+
+/**
+ * Array.every()  类似于数学中针对所有的全称量词（任意符号“∀”），当且仅当针对数组中所有元素调用判定函数都返回true时，它才返回true。
+ * Array.some()   类似于数学中的存在量词（存在符号“∃”），当数组中至少有一个元素调用判定函数返回true时，它就返回true。
+ *     两者是数组的逻辑判定，它们对数组元素应用指定的函数进行判定，返回true或false。
+ * 
+ * 注意，一旦every()和some()确认该返回什么值它们就会立即停止遍历元素。some()在判定函数第一次返回true后就返回true，但如果判定函数
+ * 一直返回false，它将会遍历整个数组。every()恰好相反，它在判定函数第一次返回false后就返回false，但如果判定函数一直返回true，它将
+ * 遍历整个数组。
+ * 注意，根据数学上的惯例，在空数组上调用时，every()返回true，some()返回false。
+ */
+a = [1,2,3,4,5];
+a.every(function(v,i,a){ return v<10; });      // true；所有值<10
+a.every(function(v,i,a){ return v%2 === 0; });   // false；不是所有值都是偶数
+
+a.some(function(v,i,a){ return v%2 === 0; });    // true；a还有偶数
+a.some(isNaN);                                 // false；a不含有非数值元素
+
+/**
+ * Array.reduce()    2个参数，第一个是执行化简操作的函数。化简函数的任务就是用某种方法把两个值组合或化简为一个值，并返回化简后的值。
+ *     第二个参数（可选）是一个传递给函数的初始值。
+ *     与forEach()和map()使用的函数不同的是，传递给reduce()方法的操作函数（第一个参数）的形参。数组元素、元素的索引和数组本身作为
+ *       第2~4个参数传递给函数
+ *     第一个参数是到目前为止的化简操作累积的结果。第一次调用时，第一个参数是一个初始值，它就是传递给reduce()方法的第二个参数。
+ *       在接下来的调用中，就是上一次化简函数的返回值。当不指定初始值调用reduce()时，它将使用数组的第一个元素作为初始值，即第一次
+ *       调用使用数组的前2个元素作为参数。
+ *     在空数组上，不带初始值参数调用reduce()将导致类型错误异常。如果调用它的时候只有一个值（数组只有一个元素并且没指定初始值或空数组
+ *       且指定一个初始值），reduce()只简单地返回那个值而不会调用化简函数。
+ * Array.reduceRight()
+ *     工作原理和reduce()一样，不同地是它按照数组索引从高到低（从右到左）处理数组，而不是从低到高。
+ * 
+ * 使用指定的函数将数组元素进行组合，生成单个值。
+ */
+a = [1,2,3,4,5];
+var sum = a.reduce(function(x,y){ return x+y; });    // 15；数组求和
+
+var product = a.reduce(function(x,y){ return x*y; });// 120；数组求积
+product = a.reduce(function(x,y){ return x*y; }, 0);// 0；数组求积
+
+var max = a.reduce(function(x,y){ return (x>y)?x:y; });// 5；求最大值
+max = a.reduce(function(x,y){ return (x>y)?x:y; }, 100);// 100；求最大值
+
+a = [2,3,4];
+var big = a.reduceRight(function(accumulator, value){
+    return Math.pow(value, accumulator);
+});                                                // 2.4178516392292583e+24；计算2^(3^4)。
+
+// 计算2个对象的“并集”，并返回另一个新对象，新对象具有二者的属性。
+function union(o1, o2){
+    // 当两个对象拥有同名的属性时，union()函数使用第一个参数的属性值
+    var result = {};
+    for (var prop in o1){
+        if (prop in result) continue;
+        result[prop] = o1[prop]
+    }
+    for (var prop in o2){
+        if (prop in result) continue;
+        result[prop] = o2[prop]
+    }
+    return result;
+}
+var objects = [{x:1}, {y:2}, {z:3}];
+var merged = objects.reduce(union);               // {x: 1, y: 2, z: 3}
+
+var objects = [{x:1, a:1}, {y:2, a:2}, {z:3, a:3}];
+var merged = objects.reduce(union);               // {x: 1, a: 1, y: 2, z: 3}
+var merged = objects.reduceRight(union);          // {x: 1, a: 3, y: 2, z: 3}
+
+/**
+ * Array.indexOf()        从头至尾查找
+ * Array.lastIndexOf()    从尾至头查找
+ * 
+ * 搜索整个数组中具有定值的元素，返回找到的第一个元素的索引。如果没有找到就返回-1。
+ * 两者不接收一个函数作为其参数。第一个参数是需要搜索的值。第二个参数是可选的，它指定数组中的一个索引，从那里开始搜索。
+ *   省略第二个参数，indexOf()就从头开始搜索，lastIndexOf()就从末尾开始搜索。第二个参数也可以是负数，它代表数组末尾的偏移量。
+ */
+var a = [0,1,2,1,0];
+a.indexOf(1);         // 1
+a.lastIndexOf(1);     // 3
+a.indexOf(3);         // -1
+a.indexOf(1, 2);      // 3
+// 在一个数组中搜索指定的值并返回包含所有匹配的数组索引的一个数组。
+function findall(a, x){
+    var result = [],
+        len = a.length,
+        pos = 0;
+    while(pos < len){
+        pos = a.indexOf(x, pos);
+        if (pos===-1) break;
+        result.push(pos);
+        pos = pos + 1;
+    }
+    return result;
+}
+
+/**
+ * 数组类型
+ * 
+ * 数组是具有特殊行为的对象。在ECMAScript 5之前区分数组和非数组对象是很困难的。typeof操作符对数组返回“对象”（对除了函数以外的对象都是如此）。
+ * instanceof操作符只能用于简单的情形。使用instanceof的问题是在Web浏览器中可能存在多个窗口或窗体（frame）。每个窗口有自己的JavaScript环境，
+ * 有自己的全局对象。并且，每个全局对象有自己的一组构造函数。因此一个窗体中的对象将不可能是另外窗体中的构造函数的实例。窗体之间的混肴不常发生，
+ * 但这个问题足以证明instanceof操作符不能视为一个可靠的数组检测方法。（2个窗体的Array对象的构造函数不同）
+ * 
+ * Array.isArray()  ECMAScript 5中使用它判定一个变量是否是数组对象。
+ * 
+ * ECMAScript3中通过检查对象的类属性，来判断是否是数组对象。对数组而言，该属性的值总是“Array”。如下isArray()函数。
+ */
+Array.isArray([]);      // true
+Array.isArray({});      // false
+
+[] instanceof Array;    // true
+({}) instanceof Array;  // false
+
+function isArray(a){
+    return typeof a === "object" && Object.prototype.toString.call(a) === "[object Array]";
+}
+isArray([]);            // true
+
+
+
+/**
+ * 类数组对象
+ * 
+ * JavaScript数组有一些特性是其他对象所没有的：
+ * - 当有新的元素加到列表时，自动更新length属性。
+ * - 设置length为一个较小值将截断数组。
+ * - 从Array.prototype中继承一些有用的方法。
+ * - 其类属性为“Array”。
+ * 这些特性让JavaScript数组和常规的对象有明显的区别。但是它们不是定义数组的本质特征。
+ * 
+ */
+
+ /**
+  * 一种常常完全合理的看法把拥有一个数值length属性和对应非负整数属性的对象看做一种类型的数组。虽然不能在它们之上
+  * 直接调用数组方法或者期望length属性有什么特殊行为，但是仍然可以用针对真正数组遍历的代码来遍历它们。结论就是很
+  * 多数组算法针对类数组工作的很好，就像针对真正的数组一样。如果算法把数组看成只读的或者如果它们至少保持数组长度
+  * 不变，也尤其是这种情况。以下代码为一个常规对象增加了一些属性使其变成数组对象，然后遍历生成的伪数组的“元素”。
+  */
+var a = {};
+var i = 0;
+while(i<10){
+    a[i] = i*i;
+    i++;
+}
+a.length = i;
+
+// 当作真正的数组遍历它
+var total = 0;
+for (var j=0;j<a.length;j++){
+    total += a[j];
+}
+
+/**
+ * 定义函数的Arguments对象就是一个类数组对象。在客户端JavaScript中，一些DOM方法（doucument.getElementsByTagName()）也返回数组对象。
+ * 
+ * 检测类数组对象
+ */
+function isArrayLike(o){
+    if (o &&                                       // 非null或undefined
+        typeof o === "object" &&                   // o是对象
+        isFinite(o.length) &&                      // o.length是有限数值
+        o.length >=0 &&                            // o.length是非负值
+        o.length === Math.floor(o.length) &&       // o.length是整数
+        o.length < 4294967296){                    // o.length < 2^32
+        return true;                               // o是类数组对象
+    }else{
+        return false;
+    }
+}
+
+/**
+ * 在ECMAScript5中，字符串的行为与数组类似。然而，类似上述的类数组对象的检测方法针对字符串常常返回false——最好当作字符串处理，而非数组。
+ * 
+ * JavaScript数组方法是特定意义为通用的，因此它们不仅应用在真正的数组而且在类数组对象上都能正常工作。ECMAScript5中，所有数组方法是通用的。
+ * 在ECMAScript3中，除了toString()和toLocalString()以外的所有方法也是通用的。（concat()方法是一个特例，虽然可以用在类数组对象上，但
+ * 它没有将那个对象扩充进返回的数组中。）既然类数组对象没有继承Array.prototype，那就不能在它们上面直接调用数组方法。尽管如此，可以间接
+ * 地使用Function.call方法调用。
+ */
+var a = {"0":"a", "1": "b", "2": "c", length:3};
+Array.prototype.join.call(a, "+");                 // "a+b+c"
+Array.prototype.slice.call(a, 0);                  // ["a", "b", "c"]
+Array.prototype.map.call(a, function(x){
+    return x.toUpperCase();
+});                                                // ["A", "B", "C"]
+
+/**
+ * ECMAScript5数组方法实在firefox 1.5中定义的。由于它们的写法的一般性，firefox还将这些方法的版本在Array构造函数上直接定义为函数。
+ * 使用这些方法的定义版本，上述例子可被重写。
+ */
+var a = {"0":"a", "1": "b", "2": "c", length:3};
+Array.join.call(a, "+");                 // "a+b+c"
+Array.slice.call(a, 0);                  // ["a", "b", "c"]
+Array.map.call(a, function(x){
+    return x.toUpperCase();
+});                                      // ["A", "B", "C"]
+
+/**
+ * 当用在类数组对象上时，数组方法的静态函数版本非常有用。但既然它们不是标准的，不能期望它们在所有的浏览器中都有定义。可以这样写代码来
+ * 保证使用它们之前时存在的。
+ */
+Array.join = Array.join || function(a, sep){
+    return Array.prototype.join.call(a, sep);
+}
+Array.slice = Array.slice || function(a, from, to){
+    return Array.prototype.slice.call(a, from, to);
+}
+Array.map = Array.map || function(a, f, thisArg){
+    return Array.prototype.map.call(a, f, thisArg);
+}
+
+
+
+
+/**
+ * 作为数组的字符串
+ * 
+ * ECMAScript5中，字符串的行为类似于只读数组。除了使用charAt()方法来访问单个的字符以外，还可以使用方括号。
+ */
+var s = "test";
+s.charAt(0);              // "t"
+s[0];                     // "t"
+
+/**
+ * 针对字符串的typeof操作符返回“string”。如果给Array.isArray()方法传递字符串，它将返回false。
+ * 
+ * 可索引的字符串的最大好处就是简单，用方括号代替了charAt()调用，这样更简洁、可读并且可能更高效。通用的数组方法可以用在字符串上。
+ * 
+ * 字符串是不可变值，故当把它们作为数组看待时，它们是只读的。如push()、sort()、reverse()和splice()等数组方法会修改数组，它们
+ * 在字符串上是无效的。不仅如此，使用数组方法来修改字符串会导致错误，出错时没有提示。
+ */
+Array.isArray(s);        // false
+s = "JavaScript";
+Array.prototype.join.call(s, " ");       // "J a v a S c r i p t"
+Array.prototype.filter.call(s, function(x){
+    return x.match(/[^aeiou]/)
+}).join("");                             // "JvScrpt"
