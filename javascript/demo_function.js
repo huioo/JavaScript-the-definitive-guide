@@ -662,10 +662,391 @@ funcs[4]();                        // 10
 
 
 
- /**
-  * 函数属性、方法和构造函数
-  * 
-  * 在JavaScript程序中，函数是值。对函数指定typeof运算会返回字符串“function”，但是函数是JavaScript中特殊的对象。
-  * 因为函数也是对象，它们也可以拥有属性和方法，就像普通的对象可以拥有属性和方法一样。甚至可以用Function()构造函数
-  * 来创建新的函数对象。
+/**
+ * 函数属性、方法和构造函数
+ * 
+ * 在JavaScript程序中，函数是值。对函数指定typeof运算会返回字符串“function”，但是函数是JavaScript中特殊的对象。
+ * 因为函数也是对象，它们也可以拥有属性和方法，就像普通的对象可以拥有属性和方法一样。甚至可以用Function()构造函数
+ * 来创建新的函数对象。
   */
+
+/**
+ * length属性
+ * 
+ * 在函数体里，arguments.length表示传入函数的实参的个数。而函数本身的length属性则有不同的含义。函数的length属性是只读属性，它代表
+ * 函数实参的数量，这里的参数指的是“形参”而非“实参”，也就是在函数定义时给出的实参个数，通常也是在函数调用时期望传入函数的实参个数。
+ */
+function check(args) {
+    /**
+     * 从另一个函数给它arguments数组，它比较arguments.length（实际传入的实参个数）和arguments.callee.length（期望传入的实参个数）
+     * 来判断所传入的实参个数是否正确。如果不正确，则抛出异常。
+     * 
+     * 这个函数使用arguments.callee，因此它不能在严格模式下工作
+     * 
+     * @param {*} args 另一个函数接收的参数列表
+     */
+    var actual = args.length;                      // 实参的真实个数
+    var expected = args.callee.length;             // 期望的实参个数
+    if (actual !== expected) {
+        throw Error("Expected " +expected+ " args; got " +actual);
+    }
+}
+
+function f(x,y,z) {
+    check(arguments);                              // 检查实参个数和期望的实参个数是否一致
+    return x+y+z;
+}
+
+f(1,2,3);                   // 6
+f(1,2);                     // 抛出异常
+
+/**
+ * prototype属性
+ * 
+ * 每一个函数都包含一个prototype属性，这个属性是指向一个对象的引用，这个对象称为“原型对象”（prototype object）。每一个函数都包含
+ * 不同的原型对象。当将函数用作构造函数的时候，新创建的对象会从原型对象上继承属性。
+ */
+
+/**
+ * call()方法
+ * apply()方法
+ *
+ * 我们可以将call()和apply()方法看作是某个对象（函数）的方法，通过调用方法的形式来间接调用函数。
+ * call()和apply()的第一个实参是要调用函数的母对象，它是调用上下文，在函数体内通过this来获得对它的引用。（正常调用时，函数的this代表函数本身）
+ */
+function f(a,b){
+    if (!this.name) {
+        this.name = "me";
+    }
+    return [this.name, a, b]
+}
+f(1,2);                    // ["me", 1, 2]
+// 要想以对象o的方法来调用函数f()，可以这样使用call()和apply()。
+var o = {};
+f.call(o);                 // ["me", undefined, undefined]
+o;                         // {name: "me"}
+o.name = 'not me';
+f.apply(o);                // ["not me", undefined, undefined]
+o;                         // {name: "not me"}
+
+// `f.call(o)`和`f.apply(o)`的功能和下面代码类似（假设对象o中预先不存在名为m的属性）。
+o.m = f;
+o.m();
+delete o.m;
+
+/**
+ * 在ECMAScript 5的严格模式中，call()和apply()的第一个实参都会变成this的值，哪怕传入的实参是null或undefined。在ECMAScript 3和非严格模式中，
+ * 传入的null和undefined都会被全局对象代替，而其他原始值则会被相应的包装对象（wrapper object）所替代。
+ * 
+ * 对于call()来说，第一个调用上下文实参之后的所有实参就是要传入待调用函数的值。比如，以对象o的方法的形式调用函数f()，并传入两个参数。
+ *  `f.call(o, 1, 2);`
+ * apply()方法和call()类似，但传入实参的形式和call()有所不同，它的实参都放入一个数组当中。
+ *  `f.apply(o, 1, 2);`
+ * 如果一个函数的实参可以是任意数量，给apply()传入的参数数组可以是任意长度。比如，为了找出数组中最大的数值元素，调用Math.max()方法的时候可以
+ * 给apply()方法传入一个包含任意元素的数组。
+ *  `var biggest = Math.max.apply(Math, array_of_numbers);`
+ */
+f.call(o, "do","!");       // ["not me", "do", "!"]
+f.apply(o, [1,2]);         // ["not me", 1, 2]
+Math.max.apply(Math, [1,2,3,4,5]);      // 5
+
+/**
+ * 需要注意的是，传入apply()的参数数组可以是类数组对象也可以是真实数组。实际上，可以将当前函数的arguments数组直接传入（另一个函数的）apply()
+ * 来调用另一个函数。
+ * 
+ * 如下所示，将对象o中的m()方法替换为另一个方法，可以在调用原始的方法之前和之后记录日志消息。
+ * trace()函数接收两个参数，一个对象和一个方法名，它将指定的方法替换为一个新方法，这个方法是“包裹”原始方法的另一泛函数（也称泛函，这里特指一种
+ * 变换，以函数为输入，输出可以是值也可以是另一个函数）。这种动态修改已有方法的做法有时称作“monkey-patching”。
+ */
+function trace(o, m) {
+    var orginal = o[m];               // 保存原始的m()方法
+    var trace_this = this;
+    var trace_arguments = arguments;
+    o[m] = function() {               // 定义新的方法，闭包
+        console.log(new Date(), "Entering:", m);          // 输出日志消息
+        console.log(this, arguments, arguments.length);
+        console.log(this == o);                           // true
+        console.log(this == trace_this);                  // false
+        console.log(trace_arguments == arguments);        // false
+        var result = orginal.apply(this, arguments);      // 调用原始函数
+        console.log(new Date(), "Exiting:", m);           // 输出日志消息
+        return result;
+    }
+}
+o.setName = function(a){ this.name = a;};                 // {name: "not me", setName: ƒ}
+trace(o, 'setName');
+o.setName('222');
+// Fri Oct 18 2019 11:36:06 GMT+0800 (中国标准时间) "Entering:" "setName"
+// {name: "111", setName: ƒ} Arguments ["222", callee: ƒ, Symbol(Symbol.iterator): ƒ] 1
+// true
+// false
+// false
+// Fri Oct 18 2019 11:36:06 GMT+0800 (中国标准时间) "Exiting:" "setName"
+
+/**
+ * bind()方法
+ * 
+ * bind()是在ECMAScript 5中新增的方法，但在ECMAScript 3中可以轻易模拟bind()。这个方法的主要作用就是将函数绑定
+ * 至某个对象。当在函数f()上调用bind()方法并传入一个对象o作为参数，这个方法返回一个新的函数。（以函数调用的方式）
+ * 调用新的函数将会把原始的函数f()当作o的方法来调用。
+ */
+// 传入新函数的任何实参都将传入原始函数，比如：
+function f(y) { return y+this.x; }
+var o = {x:1};
+var g = f.bind(o);                  // 函数绑定对象，通过调用g(x)来调用o.f(x)
+g(2)                                // 2
+
+// 可以通过以下方式实现这种绑定
+function bind(f, o) {
+    if (f.bind) return f.bind(o);
+    else return function(){
+        return f.apply(o, arguments);
+    }
+}
+
+/**
+ * ECMAScript 5中的bind()方法不仅仅是将函数绑定至一个对象，它还附带一些其它应用：除了第一个实参之外，传入bind()的实参
+ * 也会绑定至this，这个附带的应用是一种常见的函数式编程技术，有时也称为“柯里化”（currying）。
+ */
+var sum = function(x,y) { return x+y; };
+// 创建一个类似sum的新函数，但this的值绑定到null，并且第一个参数绑定到1，这个新函数期望只传入一个实参
+var succ = sum.bind(null, 1);
+succ(2);                         // 3
+
+function f(y,z) { return this.x+y+z; }
+var g = f.bind({x:1}, 2);
+g(3);                            // 6；this.x绑定到1，y绑定到2，z绑定到3
+
+/**
+ * 我们可以绑定this的值并在ECMAScript 3中实现这个附带的应用。下面的代码模拟实现了标准的bind()方法。
+ *  
+ * 将这个方法保存为Function.prototype.bind，以便所有的函数对象都继承它。
+ */
+if (!Function.prototype.bind){
+    Function.prototype.bind = function(o /*, args */) {
+        // 将this和arguments的值保存至变量中，留待使用
+        var self = this, boundArgs = arguments;
+
+        // bind()方法返回值是一个函数
+        return function() {
+            // 创建一个实参列表，将传入bind()的第二个及后续的实参都传入这个函数
+            var args = [];
+
+            for(var i=0;i<boundArgs.length;i++) args.push(boundArgs[i]);
+            for(var i=0;i<arguments.length;i++) args.push(arguments[i]);
+            // 将self作为o的方法来使用，传入这些实参
+            return self.apply(o, args)
+        }
+    }
+}
+
+/**
+ * ECMAScript 5定义的bind()方法也有一些特性是上述ECMAScript 3代码无法模拟的。首先，真正的bind()方法返回一个函数对象，
+ * 这个函数对象的length属性是绑定函数的形参个数减去绑定实参的个数（length的个数不能小于零）。再者，ECMAScript 5的bind()
+ * 方法可以顺带用作构造函数。如果bind()返回的函数用做构造函数，将忽略传入bind()的this，原始函数就会以构造函数的形式调用，
+ * 其实参也已经绑定（在运行时，将bind()所返回的函数用做构造函数时，所传入的实参会原封不动的传入原始函数）。由bind()方法
+ * 所返回的函数并不包含prototype属性（普通函数固有的prototype属性是不能删除的），并且将这些绑定的函数用做构造函数时所
+ * 创建的对象从原始的未绑定的构造函数中继承prototype。同样，在使用instanceof运算符时，绑定构造函数和未绑定构造函数并无两样。
+ */
+
+/**
+ * toString()方法
+ * 
+ * 和所有JavaScript对象一样，函数也有toString()方法，ECMAScript规范规定这个方法返回一个字符串，这个字符串和函数声明语句
+ * 的语法有关。实际上，大多数（非全部）的toString()方法都返回函数的完整源码。内置函数往往返回一个类似“[native code]”的
+ * 字符串作为函数体。
+ */
+
+/**
+ * Function()构造函数
+ * 
+ * 不管是通过函数定义语句还是函数直接量表达式，函数的定义都要使用function关键字。但函数还可以通过Function()构造函数来定义。
+ */
+// 通过Function()构造函数创建一个新的函数
+var f = Function("x", "y", "return x+y;");
+// 等价于
+var f = function(x,y){ return x+y; };
+
+/**
+ * Function()构造函数可以传入任意数量的字符串实参，最后一个实参表示的文本就是函数体；它可以包含任意的JavaScript语句，每两条
+ * 语句之间用分号分隔。传入构造函数的其他所有实参字符串，是指定函数的形参名字的字符串。如果定义的函数不包含任何参数，只须给
+ * 构造函数简单地传入一个字符串 —— 函数体 —— 即可。
+ * 
+ * 注意，Function()构造函数并不需要通过传入实参以指定函数名。就像函数直接量一样，Function()构造函数创建一个匿名函数。
+ * 
+ * 关于Function()构造函数有几点需要注意：
+ * - Function()构造函数允许JavaScript在运行时动态创建并编译函数。
+ * - 每次调用Function()构造函数都会解析函数体，并创建新的函数对象。如果是在一个循环或者多次调用的函数中执行这个构造函数，
+ *      执行效率会受到影响。相比之下，循环中的嵌套函数和函数定义表达式不会每次执行都重新编译。
+ * - 最后一点，也是关于Function()构造函数非常重要的一点，就是它所创建的函数并不是使用词法作用域，相反，函数体代码的编译
+ *      总会在顶层函数（即全局作用域）执行。如下所示。
+ */
+var scope = "global";
+function constructFunction() {
+    var scope = "local";
+    return new Function("return scope;");       //无法捕获局部作用域
+}
+// 通过Function()构造函数所返回的函数使用的不是局部作用域。
+constructFunction()();                            // global
+
+/**
+ * 可调用的对象
+ * 
+ * “类数组对象”并不是真的数组，但大部分场景下可以将其当作数组来对待。对于函数也有类似的情况。“可调用的对象”（callable object）
+ * 是一个对象，可以在函数调用表达式中调用这个对象。所有的函数都是可调用的，但并非所有的可调用对象都是函数。
+ * 
+ * 截至目前，可调用对象在两个JavaScript实现中不能算作函数。首先，IE Web浏览器（IE8及之前的版本）实现了客户端方法（诸如
+ * Window.alert()和Document.getElementById()），使用了可调用的宿主对象，而不是内置函数对象。IE中的这些方法在其他浏览器中也
+ * 都存在，但它们本质上时Function对象。IE9将它们实现为真正的函数，因此这类可调用的对象将越来越罕见。
+ * 
+ * 另外一个常见的的可调用对象是RegExp对象，可以直接调用RegExp对象，这比调用它的exec()方法更快捷一些。在JavaScript中这是一个
+ * 彻头彻尾非标准特性，最开始是由Netscape提出，后被其他浏览器厂商复制，仅仅是为了和Netscape兼容。代码最好不要对可调用的RegExp对象
+ * 有太多依赖，这个特性不久将可能会废弃并删除。对RegExp执行typeof运行的结果并不统一，有的返回“function”，有的是“object”。
+ * 
+ * 如果想检测一个对象是否是真正的函数对象（并且具有函数方法），检查它class属性。
+ */
+function isFunction(f){
+    return Object.prototype.toString.call(f) === "[object function]";
+}
+
+
+
+
+/**
+ * 函数式编程
+ * 
+ * 和Lisp、Haskell不同，JavaScript并非函数式编程语言，但在JavaScript中可以像操控对像一样操控函数，也就是说可以在JavaScript中
+ * 应用函数式编程技术，ECMAScript 5中的数组方法（诸如map()和reduce()）就可以非常适合用于函数式编程风格。
+ */
+
+ /**
+  * 使用函数处理数组
+  * 
+  * 假设有一个数组，数组元素都是数字，我们想要计算这些元素的平均值和标准差。
+  */
+// 若使用非函数式编程风格的话，代码会是这样的
+var data = [1,1,5,5];
+
+var total = 0;
+for(var i=0;i<data.length;i++) {
+    total += data[i];
+}
+var mean = total/data.length;           // 3；平均数
+
+var total = 0;
+for(var i=0;i<data.length;i++) {
+    var deviation = data[i]-mean;
+    total += deviation*deviation;
+}
+var stddev = Math.sqrt(total/data.length); // 2
+
+// 可以使用map()和reduce()来实现同样的计算
+var sum = function(x,y){ return x+y; };
+var square = function(x){ return x*x; };
+
+var data = [1,1,5,5];
+var mean = data.reduce(sum)/data.length;
+var deviations = data.map(function(v,i,a) { return v-mean });
+var stddev = Math.sqrt(
+        deviations.map(square).reduce(sum)/data.length
+    );
+
+// 在ECMAScript 3中，并不存在这些数组方法，自定义map()和reduce()函数
+var map = Array.prototype.map
+    ? function(a, f) {return a.map(f);}
+    : function(a, f){
+        var results = [];
+        for (var i;i<a.length;i++) {
+            if (i in a) results[i] = f.call(null, a[i], i, a);
+        }
+        return result;
+    };
+
+var reduce = Array.prototype.reduce
+    ? function(a, f, initial) {
+        if (arguments.length > 2)
+            return a.reduce(f, initial)
+        return a.reduce(f);
+    }
+    : function(a, f, initial) {
+        var i = 0, len = a.length,accumulator;
+        if (arguments.length > 2)
+            accumulator = initial;
+        else
+            // 数组中第一个已定义元素的索引
+            if (len==0) throw TypeError();
+            while (i<len) {
+                if (i in a) {
+                    accumulator = a[i++];
+                    break;
+                }
+                else
+                    i++;
+            }
+        
+        while (i<len) {
+            if(i in a){
+                accumulator = f.call(undefined, accumulator, a[i], i, a)
+            }
+            i++;
+        }
+        return accumulator;
+    }
+// 使用定义的map()和reduce()函数
+var data = [1,1,5,5];
+var mean = reduce(data, sum)/data.length;
+var deviations = map(data, function(v,i,a) { return v-mean });
+var stddev = Math.sqrt(
+        reduce(map(deviations, square), sum)/data.length
+    );
+
+/**
+ * 高阶函数
+ * 
+ * 所谓高阶函数（high-order function）就是操作函数的函数，它接收一个或多个函数作为参数，并返回一个新函数。
+ * 
+ * 下面的not()函数就是一个高阶函数，因为它接收一个函数作为参数，并返回一个新函数。
+ */
+// 这个高阶函数返回一个新的函数，这个新函数将它的实参传入f()，返回f的返回值的逻辑非
+function not(f) {
+    return function(){
+        var result = f.apply(this, arguments);
+        return !result;
+    }
+}
+// 判断数字是否是偶数
+var even = function(x) {return x%2===0;};
+// 一个新函数，所做的事情与even()相反
+var odd = not(even);
+
+[1,1,3,5,5].every(odd);         // true；每个元素都是奇数
+
+/**
+ * 另一个例子，下面的mapper()函数，它也是接收一个函数作为参数，并返回一个新函数，这个新函数将一个数组映射到另一个使用
+ * 那个函数的函数（嵌套的闭包函数）上。这个函数使用了之前定义的map()函数，但要首先理解这两个函数有哪里不同。
+ * 
+ * As another example, consider the mapper() function below. It takes a function argument and returns a new 
+ * function that maps one array to another using that function. This function uses the map() function defined 
+ * earlier, and it is important that you understand how the two functions are different:
+ */
+function mapper(f) {
+    return function(a) {return map(a,f);}
+}
+var increment = function(x) {return x+1;};
+var incrementer = mapper(increment);
+incrementer([1,2,3]);              // [2,3,4]
+
+// 这里是一个更常见的例子，它接收两个函数f()和g()，并返回一个新的函数用以计算f(g())。
+function compose(f, g){
+    return function(){
+        return f.call(this, g.apply(this, arguments));
+    }
+}
+var sum = function(x,y){ return x+y; };
+var square = function(x){ return x*x; };
+var squareofsum = compose(square, sum);
+squareofsum(2,3);                     // 25
+
+/**
+ * 不完全函数
+ */
