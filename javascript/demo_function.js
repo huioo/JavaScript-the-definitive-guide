@@ -179,12 +179,12 @@ easycopy({from: a, to: b, length:4});
 function max(/* number... */){ /* 代码区 */}
 
 function isArrayLike(o){
-    if (o &&                                       // 非null或undefined
-        typeof o === "object" &&                   // o是对象
-        isFinite(o.length) &&                      // o.length是有限数值
-        o.length >=0 &&                            // o.length是非负值
-        o.length === Math.floor(o.length) &&       // o.length是整数
-        o.length < 4294967296){                    // o.length < 2^32
+    if (o                                          // 非null或undefined
+     && typeof o === "object"                      // o是对象
+     && isFinite(o.length)                         // o.length是有限数值
+     && o.length >=0                               // o.length是非负值
+     && o.length === Math.floor(o.length)          // o.length是整数
+     && o.length < 4294967296){                    // o.length < 2^32
         return true;                               // o是类数组对象
     }else{
         return false;
@@ -1049,4 +1049,143 @@ squareofsum(2,3);                     // 25
 
 /**
  * 不完全函数
+ * 
+ * 调用函数的bind()方法返回一个新函数，给新函数传入特定的上下文和一组指定的参数，然后调用新函数。我们说它把
+ * 函数“绑定至”对象并传入一部分参数。bind()方法只是将实参放在（完整实参列表的）左侧，也就是说传入bind()的实参
+ * 都是放在传入原始函数的实参列表开始的位置，但有时我们期望将传入bind()的实参放在（完整实参列表的）右侧。
+ * 
+ * 译注，这是一种函数变换技巧，即把一次完整的函数调用折成多次函数调用，每次传入的实参都是完整实参的一部分。每个拆分开的
+ * 函数叫做不不完全函数（partial function），每次函数调用叫做不完全调用（partial application），这种函数变换的特点是
+ * 每次调用都返回一个函数，直至得到最终运行结果为止。举一个简单的例子，将对函数`f(1,2,3,4,5,6)`的调用修改为等价的
+ * f(1,2)(3,4)(5,6)，后者包含三次调用，和每次调用相关的函数就是“不完全函数”。
  */
+// 工具函数，将类数组对象转换为真正的数组
+function array(a, n) { return Array.prototype.slice.call(a, n || 0); }
+
+// 实参传递至左侧
+function partialLeft(f /* , ... */) {
+    var args = arguments;                  // 保存外部实参
+    return function() {
+        var a = array(args, 1);            // 从外部arguments的索引为1的参数开始
+        a = a.concat(array(arguments));    // 增加所有的内部实参
+        return f.apply(this, a);           // 基于这个实参列表调用f()
+    }
+}
+
+// 实参传递至右侧
+function partialRight(f /* , ... */) {
+    var args = arguments;                  // 保存外部实参
+    return function() {
+        var a = array(arguments);          // 从内部实参开始
+        a = a.concat(array(args, 1));      // 增加外部从索引为1的实参列表
+        return f.apply(this, a);           // 基于这个实参列表调用f()
+    }
+}
+
+// 这个函数的实参被用作模板
+// 实参列表中的undefined值都被填充
+function partial(f /* , ... */) {
+    var args = arguments;
+    return function(){
+        var a = array(args, 1);
+        var i=0,
+            j=0;
+        // 遍历args，从内部填充undefined的值
+        for (;i<a.length;i++) {
+            if (a[i] === undefined) a[i] = arguments[j++];
+        }
+        a = a.concat(array(arguments, j));
+        return f.apply(this, a);
+    }
+}
+
+var f = function(x,y,z){return x*(y-z);};
+
+partialLeft(f, 2)(3,4);             // -2；2*(3-4)
+partialRight(f, 2)(3,4);            //  6；3*(4-2)
+partial(f, undefined, 2)(3,4);      // -6；3*(2-4)
+
+// 利用这种不完全函数的编程技巧，可以编写一些有意思的代码，利用已有的函数来定义新的函数
+function sum(x,y) {return x+y;}
+var increment = partialLeft(sum, 1);
+
+var cuberoot = partialRight(Math.pow, 1/3); //立方根
+
+String.prototype.first = partial(String.prototype.charAt, 0);
+String.prototype.last = partial(String.prototype.substr, -1, 1);
+
+// 当将不完全调用和其他高阶函数整合到一起的时候，事情就变得格外有趣了。
+function compose(f, g){
+    return function(){
+        return f.call(this, g.apply(this, arguments));
+    }
+}
+var not = partialLeft(compose, function(x){return !x;});
+var even = function(x) {return x%2===0};
+var odd = not(even);
+var isNumber = not(isNaN);
+
+// 重新组织求平均数和标准差
+var data = [1,1,5,5];
+var sum = function(x,y) {return x+y;};
+var product = function(x,y) {return x*y;};
+var neg = partial(product, -1); // 负数
+var square = partial(Math.pow, undefined, 2);
+var sqrt = partial(Math.pow, undefined, 1/2);
+var reciprocal = partial(Math.pow, undefined, -1);  //倒数
+
+// 所有函数都不带运算符，看起来像lisp
+var mean = product(reduce(data, sum), reciprocal(data.length));         // 3
+var stddev = sqrt(product(
+    reciprocal(data.length),
+    reduce(
+        // map(data, compose(square, partial(sum, neg(mean)))),
+        map(map(data, partial(sum, neg(mean))), square),
+        sum
+    )
+));
+
+/**
+ * 记忆
+ * 
+ * 在前面定义了一个阶乘函数，它可以将上次的计算结果缓存起来。在函数式编程当中，这种缓存技巧叫做“记忆”（memorization）。
+ * 
+ * 译注，记忆只是一种编程技巧，本质上式牺牲算法的空间复杂度以换取更优的时间复杂度，在客户端JavaScript中代码的执行时间复杂度
+ * 往往成为瓶颈，因此在大多数场景下，这种牺牲空间换取时间的做法以提升程序执行效律的做法是可取的。
+ * 
+ * memorize()函数接受一个函数作为实参，并返回带有记忆能力的函数
+ */
+function memorize(f) {
+    var cache = {};
+    return function(){
+        var key = arguments.length + Array.prototype.join.call(arguments, ",");
+        if (key in cache) {
+            console.log(key);
+            return cache[key];
+        }
+        return cache[key] = f.apply(this, arguments);
+    }
+}
+
+/**
+ * memorize()函数创建一个新的对象，这个对象被当作缓存（的宿主）并赋值给一个局部变量，因此对于返回的函数来说，它是私有的（闭包中）。
+ * 所返回的函数将它的实参数组转换成字符串，并将字符串用做缓存对象的属性名。如果在缓存中存在这个值就直接返回它。否则，就调用既定的
+ * 函数对实参进行计算，将计算结果缓存起来并返回。
+ */
+// 返回两个整数的最大公约数，使用欧几里得算法
+function gcd(a,b) {    //省略类型检查
+    var t;
+    if (a < b) t=b,b=a,b=t;    // 确保a>=b
+    while (b!=0) t=b,b=a%b,a=t;    // 求最大公约数
+    return a
+}
+
+var gcdmemo = memorize(gcb);
+gcbmemo(85, 187);           // 17
+
+// 注意，当我们写一个递归函数时，往往需要实现记忆功能
+// 我们更希望调用实现了记忆功能的递归函数，而不是原递归函数
+var factorial = memorize(function(n){
+    return n<=1?1: n* factorial(n-1);}
+);
+factorial(5);               // 120；对于4~1的值也有缓存

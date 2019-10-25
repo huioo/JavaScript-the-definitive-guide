@@ -489,18 +489,18 @@ Object.prototype.isPrototypeOf(o)      // true  p继承自Object.prototype
  */
 
 
- /**
-  * 类属性
-  * 
-  * 对象的类属性（class attribute）是一个字符串，用以表示对象的类型信息。
-  * ECMASCript3和ECMAScript5都未提供设置这个属性的方法，并只有一种间接的方法可以查询它。
-  * 默认的toString()方法（继承自Object.prototype）返回了如下这种格式的字符串：
-  *     [object class]
-  * 
-  * 因此，要想获得对象的类，可以调用对象的toString()方法，然后提取已返回的字符串的第8个到倒数第二个位置之间的字符。
-  * 但是，很多对象继承的toString()方法重写了，为了能调用正确的toString()版本，必须间接地调用Function.call()方法。
-  */
- // classof()函数返回传递给它地任意对象的类
+/**
+ * 类属性
+ * 
+ * 对象的类属性（class attribute）是一个字符串，用以表示对象的类型信息。
+ * ECMASCript3和ECMAScript5都未提供设置这个属性的方法，并只有一种间接的方法可以查询它。
+ * 默认的toString()方法（继承自Object.prototype）返回了如下这种格式的字符串：
+ *     [object class]
+ * 
+ * 因此，要想获得对象的类，可以调用对象的toString()方法，然后提取已返回的字符串的第8个到倒数第二个位置之间的字符。
+ * 但是，很多对象继承的toString()方法重写了，为了能调用正确的toString()版本，必须间接地调用Function.call()方法。
+ */
+// classof()函数返回传递给它地任意对象的类
 function classof(o){
     if (o === null) return "Null"
     if (o === undefined) return "Undefined"
