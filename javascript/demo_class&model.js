@@ -390,7 +390,7 @@ Complex.prototype.toString = function() {
 /**
  * JavaScript内置类的原型对象也是一样如此“开放”，也就是说可以给数字、字符串、数组、函数等数据类型添加方法。
  */
-// 给ECMAScript 3中的函数类添加binde()方法
+// 给ECMAScript 3中的函数类添加bind()方法
 if(!Function.prototype.bind) {
     Function.prototype.bind = function(o /*, args */) {
         // bind()方法代码
@@ -887,7 +887,7 @@ var hand = deck.deal(13).sort(Card.orderBySuit);
  * 但这些方法的确非常重要，如果没有为自定义的类实现这些方法，也应当有意为之，而不应当忽略它们。
  * 
  * toString()方法是返回一个可以表示这个对象的字符串。在希望使用字符串的地方用到对象的话（比如将对象用做属性名或使用
- * “+”运算符进行字符串连接运算），JavaScript会自动调用这个方法。如果没有实现这个方法，类会默认从Object.prototoype
+ * “+”运算符进行字符串连接运算），JavaScript会自动调用这个方法。如果没有实现这个方法，类会默认从Object.prototype
  * 中继承toString()方法，这个方法的运算结果是“[object Object]”。toString()方法应该返回一个可读的字符串，这样用户
  * 才能将这个输出值利用起来，然后有时候并不一定非要如此，不管怎样，可以返回可读字符串的toString()方法也让程序调试变
  * 得更轻松。例9-2和例9-3中的Range类和Complex类都定义了toString()方法，例9-7中的枚举类型也定义了toString()方法。
@@ -1173,19 +1173,6 @@ r.from = function() {return o;}; //通过方法替换来修改它
  * 多义性，如果集合的某个成员是一个数组就无法通过这个构造函数来创建这个集合了（为了做到这一点，需要首先创建一个空
  * 集合，然后显式调用add()方法）。
  */
-function NewSet() {
-    this.values = {};
-    this.n = 0;
-
-    // 如果传入一个类数组对象，将这个元素添加到集合中，否则，将所有的参数都添加至集合中
-    if (arguments.length == 1 && isArrayLike(arguments[0]))
-        this.add.apply(this, arguments[0]);
-    else if (arguments.length > 0)
-        this.add.apply(this, arguments);
-}
-
-NewSet.prototype = Set.prototype;
-
 function isArrayLike(o){
     if (o                                          // 非null或undefined
      && typeof o === "object"                      // o是对象
@@ -1198,6 +1185,19 @@ function isArrayLike(o){
         return false;
     }
 }
+
+function NewSet() {
+    this.values = {};
+    this.n = 0;
+
+    // 如果传入一个类数组对象，将这个元素添加到集合中，否则，将所有的参数都添加至集合中
+    if (arguments.length == 1 && isArrayLike(arguments[0]))
+        this.add.apply(this, arguments[0]);
+    else if (arguments.length > 0)
+        this.add.apply(this, arguments);
+}
+
+NewSet.prototype = Set.prototype;
 
 // 下面这个工厂方法用来通过数组初始化Set对象
 Set.fromArray = function(a) {
@@ -1280,11 +1280,16 @@ Function.constructor == B.constructor;   // true
   Object.constructor == B.constructor;   // true
 
 /**
+ * B.prototype = inherit(A.prototype);
+ * B.prototype.constructor = B;
+ * 
  * 这两行代码是在JavaScript中创建子类的关键。如果不这么做，原型对象仅仅是一个普通对象，它只继承自Object.prototype，这意味着
  * 你的类和所有的类一样是Object的子类。如果将这两行代码添加至defineClass()函数中，可以将它变成例9-11中的defineSubClass()函数
  * 和Function.prototype.extend()方法。
  * 
  * 例9-11：定义子类
+ * 
+ * 用一个简单的函数创建简单的子类
  */
 function defineSubClass(
     superclass,
@@ -1301,9 +1306,10 @@ function defineSubClass(
     return constructor;
 }
 
-// 通过父类构造函数的方法来做到这一点
+// 我们也可以将它作为父类构造函数的方法来做到这一点
+// 给函数对象（类或构造函数）添加extend方法
 Function.prototype.extend = function (constructor, methods, statics) {
-    return defineSubClass(constructor, methods, statics);
+    return defineSubClass(this, constructor, methods, statics);
 }
 
 /**
@@ -1318,13 +1324,567 @@ function SingletonSet(member){
 }
 
 // 创建一个原型对象，这个原型对象继承自Set的原型
-SingletonSet.prototoype = inherit(Set.prototype);
+SingletonSet.prototype = inherit(Set.prototype);
 
 // 给原型添加属性
 // 如果有同名的属性就覆盖Set.prototype中的同名属性
 extend(SingletonSet.prototype, {
     // 设置合适的constructor属性
     constructor: SingletonSet,
-
+    // 集合只读，调用add()和remove()报错
+    add: function() { throw "read-only set"; },
+    remove: function() { throw "read-only set"; },
+    // SingletonSet的实例中永远只有一个元素
+    size: function() { return 1; },
+    // 这个方法只调用一次，传入集合的唯一成员
+    foreach: function(f,context) { f.call(context, thsi.member); },
+    // contains()方法非常简单，只需检查传入的值是否匹配这个集合唯一的成员即可
+     contains: function(x) { return x === this.member; }
 });
+
+/**
+ * 这里的SingletonSet类是一个比较简单的实现，它包含5个简单的方法定义。它实现了5个核心的Set方法，但从它的父类中
+ * 继承了toString()、toArray()和equals()方法。定义子类就是为了继承这些方法。比如，Set类的equals()方法用来对
+ * Set类实例进行比较，只要Set的实例包含size()和foreach()方法，就可以通过equals()比较。因为SingletonSet类是
+ * Set类的子类，所以它自动继承了equals()的实现，不用在实现一次。当然，如果想要最简单的实现方式，那么给SingletonSet
+ * 类定义它自己的equals()版本会更高效一些。
+ */
+SingletonSet.prototype.equals = function(that) {
+    return that instanceof SingletonSet
+        && that.size() == 1
+        && that.contains(this.member);
+}
+
+/**
+ * 需要注意的是，SingletonSet不是将Set中的方法列表静态地借用过来，而是动态地从Set类继承方法。如果给Set.prototype
+ * 添加新方法，Set与SingletonSet的所有实例就会立即拥有这个方法（假定SingletonSet没有定义与之同名的方法）。
+ */
+
+
+/**
+ * 构造函数和方法链
+ * 
+ * 上面的SingletonSet类定义了全新的集合实现，而且将它继承自其父类的核心方法全部替换。然而定义子类时，我们往往希望
+ * 对父类的行为进行修改或扩充，而不是完全替换掉它们。为了做到这一点，构造函数和子类的方法需要调用或链接到父类构造函数
+ * 和父类方法。
+ * 
+ * 例9-13对此做了展示。
+ * 
+ * 它定义了Set的子类NonNullSet，它不允许null和undefined作为它的成员。为了使用这种方式对成员的做限制，NonNullSet
+ * 需要在其add()方法中对null和undefined值做检测。但它需要完全重新实现一个add()方法，因此他调用了父类中的这个方法。
+ * 注意，NonNullSet()构造函数同样不需要重新实现，它只需要将它的参数传入父类构造函数（作为函数来调用它，而不是通过
+ * 构造函数来调用），通过父类的构造函数来初始化新创建的对象。
+ */
+function NonNullSet() {
+    // 仅链接到父类
+    // 将父类的构造函数作为普通函数来调用，使用它初始化通过该构造函数调用创建的对象
+    Set.apply(this, arguments);
+}
+
+// 将NonNullSet设置为Set的子类
+NonNullSet.prototype = inherit(Set.prototype);
+NonNullSet.prototype.constructor = NonNullSet;
+
+// 为了将null和undefined排除在外，只须重写add()方法
+NonNullSet.prototype.add = function() {
+    // 检查参数是不是null或undefined
+    for (var i=0;i<arguments.length;i++) {
+        if (arguments[i] == null)
+            throw new Error("Can't add null or undefined to a NonNullSet.");
+    }
+    // 调用父类的add()方法以执行实际插入操作
+    return Set.prototype.add.apply(this, arguments)
+}
+
+/**
+ * 让我们将这个非null集合的概念推而广之，称为“过滤后的集合”，这个集合中的成员必须首先传入一个过滤函数再执行添加操作。
+ * 为此，定义一个类工厂函数（类似例9-7中的enumeration()函数），传入一个过滤函数，返回一个新的Set子类。实际上，可以对
+ * 此作进一步的通用化的处理，定义一个可以接收两个参数的类工厂：子类和用于add()方法的过滤函数。
+ * 
+ * 例9-14展示了该类工厂函数的实现代码。注意，这个例子中的方法链和构造函数链跟NonNullSet中的实现是一样的。这工厂方法
+ * 称为filteredSetSubclass()，并通过这样的代码来实现。
+ */
+function filteredSetSubclass(superclass, filter) {
+    // 子类构造函数，其中会调用父类构造函数
+    var constructor = function() {
+        superclass.apply(this, arguumments);
+    };
+
+    var proto = constructor.prototype = inherit(superclass.prototype);
+    proto.constructor = constructor;
+    proto.add = function() {
+        // 在添加任何成员之前首先使用过滤器将所有参数进行过滤
+        for (var i=0;i<arguments.length;i++) {
+            var v = arguments[i];
+            if (!filter(v)) throw ("value" +v+ " rejected by filter");
+        }
+        // 调用父类
+        superclass.prototype.add.apply(this, arguments);
+        return this;
+    };
+
+    return constructor;
+}
+
+// 定义一个只能保存字符串的“集合”类
+var StringSet = filteredSetSubclass(Set, function(x) { return typeof x === "string"; });
+
+// 定义一个不能保存null、undefined或函数的“集合”类
+var MySet = filteredSetSubclass(NonNullSet, function(x) { return typeof x !== "function"; });
+
+/**
+ * 例9-14中一个比较有趣的事情是，用一个函数将创建子类的代码包裹起来，这样就可以在构造函数和方法链中使用父类的参数，而不是
+ * 通过写死某个父类名字来使用它的参数。也就是说，如果想要修改父类，只需要修改一处代码既可，而不必对每个用到父类类名的地方
+ * 都做修改。已经有有充足的理由证明这种技术的可行性，即使在不是定义类工厂的场景中，这种技术也是值得提倡的。比如，可以这样
+ * 使用包装函数和例9-11的Function.prototype.extend()方法来重写NonNullSet。
+ * 
+ * 笔记推测：对Function.prototype添加属性extend，即给使用function关键字定义的函数（或构造函数）添加了属性。
+ * 
+ * 最后，值得强调的是，类似这种创建类工厂的能力是JavaScript语言动态特性的一个体现，类工厂是一种非常强大和有用的特性，这
+ * 在Java和C++等语言中是没有的。
+ */
+var NonNullSet = (function(){
+    var superclass = Set;
+    return superclass.extend(
+        function() { superclass.apply(this, arguments); },    // 构造函数
+        {
+            add: function() {
+                // 检查参数是否是null或undefined
+                for (var i=0;i<arguments.length;i++)
+                    if (arguments[i] == null)
+                        throw new Error("Can't add null or undefined.")
+                // 调用父类的add()方法以执行实际插入操作
+                return superclass.prototype.add.apply(this, arguments);
+            }
+        }
+    );
+}());
+
+/**
+ * 组合 vs 子类
+ * 
+ * 前面根据特定的标准对集合成员作出限制来定义新的集合，使用了子类的技术来实现这种功能，所创建的自定义子类使用了特定的过滤函数
+ * 来对集合中的成员做限制。父类和过滤函数的每个组合都需要创建一个新的类。
+ * 
+ * 用另一种方法来完成这种需求，即面向对象编程中一条广为人知的设计原则：“组合优于继承”。这样可以利用组合的原理定义一个新的集合
+ * 实现，它“包装”了另外一个集合对象，在将受限的成员过滤掉之后会用到这个（包装的）集合对象。
+ * 
+ * 例9-15：使用组合代替继承的集合的实现
+ */
+var filteredSet = Set.extend(
+    // 构造函数
+    function filteredSet(set, filter) { this.set = set;this.filter = filter; },
+    // 实例方法
+    {
+        add: function (){
+            if (this.filter){
+                for (var i=0;i<arguments.length;i++){
+                    var v = arguments[i];
+                    if (!this.filter(v)){
+                        throw new Error("FilteredSet: value " +v+ " rejected by filter");
+                    }
+                }
+            }
+            // 调用Set中的add方法
+            this.set.add.apply(this.set, arguments);
+            return this;
+        },
+        // 剩下的方法都保持不变
+        remove: function (){
+            this.set.remove.apply(this.set, argumments);
+            return this;
+        },
+        contains: function (x){ return this.set.contains(x); },
+        size: function (){ return this.set.size(); },
+        foreach: function (f, c){ this.set.foreach(f, c); }
+    }
+)
+
+/**
+ * 这个例子中使用组合的一个好处是，只须创建一个单独的FilteredSet子类既可。可以利用这个类的实例来创建任意带有成员限制的集合
+ * 实例。比如，不用上文定义的NonNullSet类，甚至还可以对已经过滤后的集合进行过滤。
+ */
+var s = new filteredSet(new Set(), function (x){ return x!==null; });
+
+var t = new filteredSet(s, function (x){return !(x instanceof Set)});
+
+/**
+ * 类的层次结构和抽象类
+ * 
+ * “从实现中抽离出接口”。假定一个AbstractSet类，其中定义了一些辅助方法，比如toString()，但并没有实现诸如foreach()的核心
+ * 方法。这样，这里的Set、SingletonSet和FilteredSet都是这个抽象类的子类，FilteredSet和SingletonSet都不必再实现为某个不
+ * 相关的类的子类了。
+ * 
+ * 例9-16定义了一个层次结构的抽象的集合类。
+ * 
+ * AbstractSet只定义一个抽象方法：contains()。任何类只要“声称”自己是一个表示范围的类，就必须至少定义这个contains()方法。
+ * 
+ * 然后，定义AbstractSet的子类AbstractEnumerableSet。这个类增加了抽象的size()和foreach()方法，而且都定义了一些有用的非
+ * 抽象方法（toString()、toArray()、equal()等），AbstractEnumerableSet并没有定义add()和remove()方法，它只代表只读集合。
+ * SingletonSet可以实现为非抽象子类。
+ * 
+ * 最后，定义了AbstractEnumerableSet的子类AbstractWritableSet。这个final抽象集合定义了抽象方法add()和remove()，并实现
+ * 了诸如union()和intersection()等非具体方法，这两个方法调用了add()和remove()。AbstractWritableSet是Set和FilteredSet类
+ * 相应的父类。但这个例子中并没有实现它，而是实现了一个新的名叫ArraySet的非抽象类。
+ * 
+ * 这里用到了Function.prototype.extend()作为创建子类的快捷方式。
+ */
+
+/**
+ * 这个函数可以做任何对象的抽象方法
+ */
+function abstractmethod(){
+    throw new Error("abstract method.");
+}
+
+/**
+ * AbstractSet类定义了一个抽象方法：contains()
+ */
+function AbstractSet(){
+    throw new Error("Can't instantiate abstract classes.");
+}
+AbstractSet.prototype.contains = abstractmethod;
+
+/**
+ * NotSet是AbstractSet类的一个非抽象子类
+ * 所有不在其他集合中的成员都在这个集合中，因为它是在其它集合是不可写的条件下定义的
+ * 同时由于它的成员是无限个，因此它是不可枚举的
+ * 我们只能用它来检测元素成员的归属情况
+ * 注意，我们使用了Function.prototype.extend()方法来定义这个子类
+ */
+var NotSet = AbstractSet.extend(
+    function NotSet(set){ this.set=set; },
+    {
+        contains: function (x){ return !this.set.contains(x); },
+        toString: function (){ return "~" +this.set.toString(); },
+        equals: function (that){
+            return that instanceof NotSet
+                && this.set.equals(that.set);
+        }
+    }
+);
+
+/**
+ * AbstractEnnumerableSet是AbstractSet的一个抽象子类
+ * 它定义了抽象方法size()和foreach()方法
+ * 然后实现了非抽象方法isEmpty()、toArray()、toLocaleString()、toString()、equals()方法
+ * 子类实现了contains()、size()和foreach()，这三个方法可以轻易地调用这5个非抽象方法
+ */
+var AbstractEnumerableSet = AbstractSet.extend(
+    function (){ throw new Error("Can't instantiate abstract classes"); },
+    {
+        size: abstractmethod,
+        foreach: abstractmethod,
+        isEmpty: function (){ return this.size() == 0; },
+        toString: function (){
+            var s = "{",
+                i = 0;
+            this.foreach(function (v){
+                if (i++>0) s += ", ";
+                s += v;
+            });
+            return s+ "}";
+        },
+        toLocaleString: function (){
+            var s = "{",
+                i = 0;
+            this.foreach(function (v){
+                if (i++>0) s += ", ";
+                if (v == null) s += v;
+                else s += v.toLocaleString();
+            });
+            return s+ "}";
+        },
+        toArray: function (){
+            var a = [];
+            this.foreach(function (v){ a.push(v); });
+            return a;
+        },
+        equals: function (that){
+            if (!(that instanceof AbstractEnumerableSet)) return false;
+            // 检查集合大小
+            if (this.size() !== that.size()) return false;
+            // 检查每个元素是否在that中
+            try {
+                this.foreach(function (v){ 
+                    if (!(that.contains(v))) 
+                        throw false; 
+                    });
+                return true;
+            }
+            catch (e){
+                if (e === false) return false;
+                throw e;
+            }
+        }
+    }
+);
+
+/**
+ * SingletonSet是AbstractEnumerableSet的非抽象子类
+ * Singleton集合是只读的，它只有一个成员
+ */
+var SingletonSet = AbstractEnumerableSet.extend(
+    function SingletonSet(member){ this.member=member; },
+    {
+        contains: function (v){ return this.member === v; },
+        size: function (){ return 1; },
+        foreach: function (f, c){
+            f.call(c, this.member);
+        }
+    }
+)
+
+/**
+ * AbstractWritableSet是AbstractEnumerableSet的抽象子类
+ * 它定义了抽象方法add()和remove()方法
+ * 然后实现了非抽象方法union()、intersection()和difference()
+ */
+var AbstractWritableSet = AbstractEnumerableSet.extend(
+    function (){ throw new Error("Can't instantiate abstract classes"); },
+    {
+        add: abstractmethod,
+        remove: abstractmethod,
+        union: function (that){
+            var self = this;
+            that.foreach(function (v){
+                self.add(v);
+            });
+            return this;
+        },
+        intersection: function (that){
+            var self = this;
+            this.foreach(function (v){
+                if (!(that.contains(v)))
+                    self.remove(v);
+            });
+            return this;
+        },
+        difference: function (that){
+            var self = this;
+            that.foreach(function (v){ self.remove(v); });
+            return this;
+        }
+    }
+);
+
+/**
+ * ArraySet是AbstractWritableSet类的非抽象子类
+ * 它以数组的方式表示集合中的元素，对于它的contains()方法使用了数组的线性查找
+ * 因为contains()方法的算法复杂度是O(n)而不是O(1)，它非常适用于相对小型的集合
+ * 注意，这里的实现用到了ES5的数组方法indexOf()和foreach()方法
+ */
+var ArraySet = AbstractWritableSet.extend(
+    function ArraySet(){
+        this.values = [];
+        this.add.apply(this, arguments);
+    },
+    {
+        contains: function (v){ return this.values.indexOf(v) != -1; },
+        size: function (){ return this.values.length; },
+        foreach: function (f, c){
+            this.values.foreach(f,c);
+        },
+        add: function(){
+            for (var i=0;i<arguments.length;i++){
+                var arg = arguments[i];
+                if (!(this.contains(arg))) this.values.push(arg);
+            }
+        },
+        remove: function (){
+            for (var i=0;i<arguments.length;i++){
+                var p = this.values.indexOf(arguments[i]);
+                if (p == -1) continue;
+                this.values.splice(p, 1);
+            }
+            return this;
+        }
+    }
+);
+
+
+
+/**
+ * ECMAScrip 5中的类
+ * 
+ * ECMAScript 5给属性特性增加了方法支持（getter、setter、可枚举性、可写性和可配置性），而且增加了对象可扩展性的限制。
+ */
+
+/**
+ * 让属性不可枚举
+ * 
+ * 例9-6中的Set类使用了一个小技巧，将对象存储为“集合”的成员：它给添加至这个“集合”的任何对象定义了“对象id”属性。之后
+ * 如果在for/in循环中对这个对象做遍历，这个新添加的属性（对象id）也会遍历到。ECMAScript 5可以通过设置属性为“不可枚
+ * 举”（nonenumerable）来让属性不会被遍历到。
+ * 
+ * 例9-17展示了如何通过Object.defineProperty()来做到这一点，同时展示了如何定义一个getter函数以及检测对象是否是可
+ * 扩展的（extensible）。
+ * 
+ * 例9-17：定义不可枚举的属性
+ */
+// 将代码包装在一个匿名函数中，这样定义的变量就在这个函数作用域内
+(function(){
+    // 定义一个不可枚举的（存取器）属性objectId（"objectId"），它可以被所有对象继承
+    // 当读取这个属性时调用getter函数
+    // 它没有定义setter，因此它是只读的
+    // 它是不可配置的，因此它是不能删除的
+    Object.defineProperty(Object.prototype, "objectId", {
+        get: idGetter,         // 取值器
+        enumerable: false,     // 不可枚举
+        configurable: false,   // 不可配置
+    });
+    // 当读取objectId的时候直接调用这个getter函数
+    function idGetter() {
+        if (!(idprop in this)){
+            // 对象中不存在idprop
+            if (!Object.isExtensible(this))
+                // 对象不可扩展时，抛出错误；如果对象是不可扩展的，则可以编辑已有的自有属性，但不能添加新属性
+                throw Error("Can't define id for nonextensible objects");
+            // 对象是可扩展的
+            // 定义一个数据属性idprop（"|**objectId**|"）
+            Object.defineProperty(this, idprop, { 
+                value: nextId++,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            });
+        }
+        return this[idprop];
+    }
+
+    // idGetter()用到了这些变量，这些都属于私有属性
+    var idprop = "|**objectId**|";
+    var nextId = 1;
+
+}());
+
+/**
+ * 定义不可变的类
+ * 
+ * 除了可以设置属性为不可枚举的，ECMAScript 5还可以设置属性为只读的，当我们希望类的实例都是不可变的，这个特性
+ * 非常有帮助。例9-18使用Object.defineProperties()方法和Object.create()定义不可变的Range类。它同样使用
+ * Object.defineProperties()来为类创建原型对象，并将（原型对象的）实例方法设置为不可枚举的，就像内置类的方法
+ * 一样。不仅如此，它还将这些实例方法设置为“只读”和“不可删除”，这样就可以防止对类做任何修改（monkey-patching）。
+ * 
+ * 例9-18展示了一个有趣的技巧，其中实现的构造函数也可以用作工厂函数，这样不论调用函数之前是否带有new关键字，都
+ * 可以正确地创建实例。
+ * 
+ * 例9-18：创建一个不可变的类，它的属性和方法都是只读的
+ */
+// 这个函数可以使用new调用，也可以省略new；它可以用作构造函数，也可以用作工厂函数
+function Range(from, to){
+    // 这些是对from和to只读属性的描述符
+    var props = {
+        from: {value: from, writable: false, enumerable: true, configurable: false},
+        to: {value: to, writable: false, enumerable: true, configurable: false},
+    };
+
+    if (this instanceof Range){                         // 如果作为构造函数来调用
+        Object.defineProperties(this, props);           // 定义属性
+    }else{                                              // 否则，作为工厂方法来使用
+        return Object.create(Range.prototype, props);   // 创建并返回这个新Range对象，指定属性props
+    }
+}
+
+// 如果用同样的方法给Range.prototype对象添加属性
+// 那么我们需要给这些属性设置它们的特性
+// 因为我们无法识别出它们的可枚举型、可写性或可配置性，（添加/新增属性时）这些属性默认都是false
+Object.defineProperties(Range.prototype, {
+    includes: {
+        value: function (x){ return this.from <= x && x <= this.to; }
+    },
+    foreach: {
+        value: function (f,c){
+            for(var i=Math.ceil(this.from);i<=this.to;i++)
+                f.call(c, i);
+        }
+    },
+    toString: {
+        value: function (){ return "(" + this.from + "..." + this.to + ")"; }
+    }
+})
+
+/**
+ * 属性描述符对象让代码阅读性变差。还可以将修改这个已定义属性的特性的操作定义为一个工具函数。
+ * 
+ * 例9-19：属性描述符工具函数
+ */
+// 将o的指定名字（或所有）的属性设置为不可写的和不可配置的
+function freezeProps(o){
+    var props = (arguments.length == 1)                   // 如果只有一个参数
+        ? Object.getOwnPropertyNames(o)                   // 使用所有的属性
+        : Array.prototype.splice.call(arguments, 1);      // 否则传入了指定名字的属性
+    // 将值设置为只读的和不可变的
+    props.forEach(function (n){
+        // 忽略不可配置的属性
+        // 当传入不存在的属性名时，代码会报错
+        if (!Object.getOwnPropertyDescriptor(o, n).configurable) return;
+        // 修改
+        var descriptor = Object.getOwnPropertyDescriptor(o, n);
+        if (!descriptor) return;
+        if (!descriptor.configurable) return;
+        // 针对数据属性的更改
+        // 当该属性为存取器属性时，直接修改会将该属性的值改为undefined
+        Object.defineProperty(o, n, {writable: false, configurable: false});
+    });
+    return o;
+}
+
+var a = [1,2,3,4,5];
+Object.defineProperty(a, 0, {get: function(){return 'index of a: 0'}}); // 修改为存取器属性
+Object.getOwnPropertyDescriptor(a, 0);       // {set: undefined, enumerable: true, configurable: true, get: ƒ}
+a[0];                                        // "index of a: 0"
+freezeProps(a, 0);                           // [undefined, 2, 3, 4, 5]
+a[0];                                        // undefined
+Object.getOwnPropertyDescriptor(a, 0);       // {value: undefined, writable: false, enumerable: true, configurable: false}
+
+// 将o的指定名字（或所有）的属性设置为不可枚举和不可配置的
+function hideProps(o){
+    var props = (arguments.length == 1)
+        ? Object.getOwnPropertyNames(o)
+        : Array.prototype.splice.call(arguments, 1);
+    // 将值设置为不可枚举的
+    props.forEach(function (n){
+        // 忽略不可配置的属性
+        // 当传入不存在的属性名时，代码会报错
+        if (!Object.getOwnPropertyDescriptor(o, n).configurable) return;
+        // 修改
+        var descriptor = Object.getOwnPropertyDescriptor(o, n);
+        if (!descriptor) return;
+        if (!descriptor.configurable) return;
+
+        Object.defineProperty(o, n, {enumerable: false});
+    });
+}
+
+/**
+ * Object.defineProperty()和Object.defineProperties()可以用来创建新属性，也可以修改已有属性的特性。当用它们创建新属性时，
+ * 默认的属性特性的值都是false。但当用它们修改已经存在的属性时，默认的属性特性依然保持不变。比如在上面的hideProps()函数中，
+ * 只指定了enumerbale特性，因为我们只想修改enumerable特性。
+ */
+
+/**
+ * 例9-20：一个简单的不可变类
+ * 
+ * 使用这些工具函数，就可以充分利用ECMAScript 5的特性来实现一个不可变的类，而且不用动态地修改这个类。例9-20中不可变的Range
+ * 类就用到了刚才定义的工具函数。
+ */
+function Range(from, to){    // 不可变的Range类的构造函数
+    this.from = from;
+    this.to = to;
+    freezeProps(this);       // 将属性设置为不可变的
+}
+
+Range.prototype = hideProps({   // 使用不可枚举的属性来定义原型
+    constructor: Range,
+    includes: function(x){ return this.from <= x && x <= this.to; },
+    foreach: function (f){ for(var i=Math.ceil(this.from);i<=this.to;i++) f(i); },
+    toString: function (){ return "(" + this.from + "..." + this.to + ")"; }
+});
+
+
+/**
+ * 封装对象状态
+ */
+
 

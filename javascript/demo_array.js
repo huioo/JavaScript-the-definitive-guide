@@ -502,7 +502,7 @@ a.shift();                   // a:[]; return 1
  */
 
 /**
-  * Array.forEach()  遍历数组，为每个函数调用指定的函数。
+  * Array.forEach()  遍历数组，为每个元素调用指定的函数。
   */
 var data = [1,2,3,4,5];
 var sum = 0;
