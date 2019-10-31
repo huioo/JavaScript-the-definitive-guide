@@ -1885,6 +1885,269 @@ Range.prototype = hideProps({   // 使用不可枚举的属性来定义原型
 
 /**
  * 封装对象状态
+ * 
+ * 如例9-10所示构造函数中的变量和参数可以用做它创建的对象的私有状态。该方法在ECMAScript 3中的一个缺点是，访问这些私有状态的
+ * 存取器方法是可以替换的。在ECMAScript 5中可以通过定义属性getter和setter方法将状态变量更健壮地封装起来，这两个方法是无法
+ * 删除的，如例9-21所示。
+ * 
+ * 例9-21：将Range类的端点严格封装起来
+ */
+// 这个版本的Range类是可变的，但将端点变量进行了良好的封装
+// 但端点的大小顺序还是固定的：from <= to
+function Range(from, to){
+    // 如果from > to
+    if (from > to) throw new Error("Range：from must be <= to");
+
+    // 定义存取器方法以维持不变
+    function getFrom() { return from; }
+    function getTo() { return to; }
+    function setFrom(f) {
+        if (f <= to) from = f;
+        else throw new Error("Range：from must be <= to");
+    }
+    function setTo(t) {
+        if (t >= from ) to = t;
+        else throw new Error("Range：to must be >= from");
+    }
+    Object.defineProperties(this, {
+        from: {get: getFrom, set: setFrom, enumerable: true, configurable: false},
+        to: {get: getTo, set: setTo, enumerable: true, configurable: false},
+    });
+}
+
+Range.prototype = hideProps({
+    constructor: Range,
+    includes: function(x){ return this.from <= x && x <= this.to; },
+    foreach: function (f){ for(var i=Math.ceil(this.from);i<=this.to;i++) f(i); },
+    toString: function (){ return "(" + this.from + "..." + this.to + ")"; }
+})
+
+/**
+ * 防止类的扩展
+ * 
+ * 通常认为，通过给原型对象添加方法可以动态地对类进行扩展，这是JavaScript本身的特性。ECMAScript 5可以根据需要对此
+ * 特性加以限制。Object.preventExtensions()可以将对象设置为不可扩展的，也就是说不能给对象添加任何新属性。
+ * Object.seal()则更加强大，它除了能阻止用户给对象添加新属性，还能将当前已有的属性设置为不可配置的，这样就不能删除
+ * 这些属性了（但不可配置的属性可以是可写的，也可以转换为只读属性）。
+ * 
+ * 可以通过这样一句简单的代码来阻止对Object.prototype的扩展。
+ */
+Object.seal(Object.prototype)
+
+/**
+ * JavaScript的另外一个动态特性是“对象的方法可以随时替换”（或称为monkey-patch）
+ */
+var original_sort_method = Array.prototype.sort;
+Array.prototype.sort = function (){
+    var start = new Date();
+    original_sort_method.apply(this, arguments);
+    var end = new Date();
+    console.log("Array sort took " + (end-start) + "milliseconds.")
+}
+
+/**
+ * 可以通过将实例方法设置为只读来防止这类修改，一种方法就是使用上面代码所定义的freezeProps()工具函数。另一种方法
+ * 是使用Object.freeze()，它的功能和Object.seal()完全一样，它同样把所有属性都设置为只读的和不可配置的。
+ * 
+ * 理解类的只读属性的特性至关重要。如果对象o继承了只读属性p，那么给o.p的赋值操作将会失败，就不会给o创建新属性。如
+ * 果你想重写一个继承来的只读属性，就必须使用Object.defineProperty()、Object.defineProperties()或Object.create()
+ * 来创建这个属性。也就是说，如果将类的实例方法设置为只读的，那么重写它的子类的这些方法的难度会更大。
+ * 
+ * 这种锁定原型对象的做法往往没有必要，但的确有一些场景是需要阻止对象的扩展的。如例9-7中的enumeration()函数，这是一
+ * 个类工厂函数。这个函数将枚举类型的每个实例都保存在构造函数对象的属性里，以及构造函数的values数组中。这些属性和
+ * 数组是表示枚举类型实例的正式实例列表，是可以执行“冻结”（freezing）操作的，这样就不能给它添加新的实例，已有的
+ * 实例也无法删除和修改，可以给enumeration()函数添加几行简单的代码。
+ */
+Object.freeze(enumeration.values);
+Object.freeze(enumeration);
+
+/**
+ * 需要注意的是，通过在枚举类型中调用Object.freeze()，例9-17中定义的objectId属性之后也无法使用了。这个问题的
+ * 解决办法是，在枚举类型被“冻结”之前读取一次它的objectId属性（调用潜在的存取器方法并设置内部属性）。
  */
 
+/**
+ * 子类和ECMAScript 5
+ * 
+ * 例9-22使用ECMAScript 5的特性实现子类。这里使用例9-16中的AbstractWritableSet类来做进一步说明，来定义这个类的
+ * 子类StringSet。下面这个例子的最大特点是使用Object.create()创建原型对象，这个原型对象继承自父类的原型，同时给
+ * 新创建的对象定义属性。这种实现方式的困难之处在于，正如上文所提到的，它需要使用难看的属性描述符。
+ * 
+ * 这个例子中另外一个有趣之处在于，使用Object.create()创建对象时传入了参数null，这个创建的对象没有继承任何成员。
+ * 这个对象用来存储集合的成员，同时，这个对象没有原型，这样我们就能对它直接使用in运算符，而不需使用hasOwnProperty()方法。
+ */
 
+/**
+ * 例9-22：StringSet：利用ECMAScript 5的特性定义子类
+ */
+function StringSet(){
+    this.set = Object.create(null);   //创建一个不包含原型的对象
+    this.n = 0;
+    this.add.apply(this, arguments);
+}
+
+// 注意，使用Object.create()可以继承父类的原型
+// 而且可以定义单独调用的方法，因为我们没有指定属性的可写性、可枚举性和可配置性
+// 因此这些属性特性的默认值都是false
+// 只读方法让这个类难以子类化（被继承）
+StringSet.prototype = Object.create(AbstractWritableSet, {
+    constructor: {value: StringSet},
+    contains: {value: function(x){ return x in this.set; }},
+    size: function (){ return this.n; },
+    foreach: {value: function (f,c){ Object.keys(this.set).forEach(f,c); }},
+    add: {
+        value: function (){
+            for (var i=0;i<arguments.length;i++){
+                if (!(arguments[i] in this.set)){
+                    this.set[arguments[i]] = true;
+                    this.n++;
+                }
+            }
+            return this;
+        }
+    },
+    remove: {
+        value: function (){
+            for (var i=0;i<arguments.length;i++){
+                if (arguments[i] in this.set){
+                    delete this.set[arguments[i]];
+                    this.n--;
+                }
+            }
+            return this;
+        }
+    }
+});
+
+
+/**
+ * 属性描述符
+ * 
+ * 在例9-23中给Object.prototype添加了properties()方法（这个方法是不可枚举的）。这个方法的返回值是一个对象，用以表示
+ * 属性的列表，并定义有用的方法用来输出属性和属性特性（对于调试非常有用），用来获得属性描述符（当复制属性同时复制属性
+ * 特性时非常有用）以及用来设置属性的特性（是例9-19中定义的freezeProps()和hideProps()函数不错的替代方案）。这个例子
+ * 展示了ECMAScript 5大多数属性相关的特性，同时使用了一种模块编程技术。
+ */
+
+/**
+ * 例9-23：ECMAScript 5属性操作
+ */
+/**
+ * 给object.prototype定义properties()方法
+ * 这个方法返回一个表示调用它的对象上的属性名列表的对象（如果不带参数调用它，就表示该对象的所有属性）
+ * 返回的对象定义了4个有用的方法：toString()、descriptors()、hide()、show()
+ */
+(function namespace(){  // 将所有逻辑闭包在一个私有函数作用域中
+    
+    // 这个函数成为所有所有对象的方法
+    function properties(){
+        var names;                 // 属性名组成的数组
+        if (arguments.length == 0) 
+            // 所有的自由属性
+            names = Object.getOwnPropertyNames(this);
+        else if (arguments.length == 1 && Array.isArray(arguments[0]))
+            // 名字组成的数组
+            names = arguments[0]
+        else
+            // 参数列表本身就是名字列表
+            names = arguments;
+        
+        return new Properties(this, names);
+    }
+
+    // 将它设置为Object.prototype的新的不可枚举的属性
+    // 这是从私有函数作用域导出的唯一一个值
+    Object.defineProperty(Object.prototype, 'properties', {
+        value: properties,
+        enumerable: false, writable: true, configurable: true
+    });
+
+    // 这个构造函数是由上面的properties()函数所调用的
+    // Properties类表示一个对象的属性集合
+    function Properties(o, names){
+        this.o = o;             // 属性所属的对象
+        this.names = names;     // 属性名
+    }
+
+    // 将代表这些属性的对象设置为不可枚举的
+    Properties.prototype.hide = function (){
+        var o = this.o,
+            hidden = {enumerable: false};
+        this.names.forEach(function (n){
+            if (o.hasOwnProperty(n))
+                Object.defineProperty(o, n, hidden);
+        });
+        return this;
+    };
+
+    // 将这些属性设置为只读和不可配置的
+    Properties.prototype.freeze = function (){
+        var o = this.o;
+            freeze = {writable: false, configurable: false};
+        this.names.forEach(function (n){
+            if (o.hasOwnProperty(n))
+                Object.defineProperty(o, n, freeze);
+        });
+        return this;
+    };
+
+    // 返回一个对象，这个对象是名字到属性描述的映射类
+    // 使用它来复制属性，连同属性特性一起复制
+    // Object.defineProperties(dest, src.properties().descriptors());
+    Properties.prototype.descriptors = function(){
+        var o = this.o,
+            desc = {};
+        this.names.forEach(function (n){
+            if (!o.hasOwnProperty(n)) return;
+            desc[n] = Object.getOwnPropertyDescriptor(o, n);
+        });
+        return desc;
+    };
+
+    // 返回一个格式化良好的属性列表
+    // 列表中包含名字、值和属性特性，使用“permanent”表示不可配置
+    // 使用“readonly”表示不可写，使用“hidden”表示不可枚举
+    // 普通的可枚举、可写和可配置属性不包含特性列表
+    Properties.prototype.toString = function (){
+        var o = this.o,
+            lines = this.names.map(nameToString);
+        return "{\n " + lines.join(",\n ") + "\n}";
+
+        function nameToString(v,i,a){
+            var s = "",
+                desc = Object.getOwnPropertyDescriptor(o, v);
+            if (!desc) return "nonexistent " + v + ": undefined";
+            if (!desc.configurable) s += "permanent ";
+            if ((desc.get && !desc.set) || !desc.writable) s += "readonly ";
+            if (!desc.enumerable) s += "hidden ";
+            if (desc.get || desc.set) s += "accessor " + v
+            else s += v
+                    + ": "
+                    + ((typeof desc.value === "function") ? "function" : desc.value);
+            return s;
+        }
+    };
+
+    // 最后，将原型对象中的实例方法设置为不可枚举的
+    // 使得给Object.prototype定义的properties()方法，调用它返回的对象中的实例方法不会被遍历到
+    // 这里用到了刚定义的方法
+    Properties.prototype.properties().hide();
+}()); // 立即执行
+
+
+
+/**
+ * 模块
+ * 
+ * 将代码组织到类中的一个重要原因是，让代码更加“模块化”，可以在很多不同场景中实现代码的重用。但类不是唯一的模块化代码的方式。
+ * 一般来说，模块是一个独立的JavaScript文件。模块文件可以包含一个类定义、一组相关的类、一个实用函数库或者是一些待执行的代码。
+ * 只要以模块的形式编写代码，任何JavaScript代码段就可以当做一个模块。
+ * 
+ * 译者注：作者这里的表述是围绕“模块是一个可重用的代码片段”这一观念的，不论是从代码语法结构上解耦，还是将代码拆分至不同的文件
+ * 中，只要用某种方法将代码“分离”，就认为是一个模块，因此作者说任何代码都可以处理为一个模块。
+ * 
+ * JavaScript中并没有定义用以支持模块的语言结构（但imports和exports的确是JavaScript保留的关键字，因此JavaScript的未来版本
+ * 可能会支持），这也意味着在JavaScript中编写模块化的代码更多的是遵循某一种编码约定。
+ * 
+ * 
+ */
