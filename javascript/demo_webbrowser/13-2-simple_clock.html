@@ -1,0 +1,50 @@
+<!DOCTYPE html>          <!-- 这是一个HTML5文件 -->
+<html>                   <!-- 根节点 -->
+<head>                   <!-- 标题、脚本和样式都放这里-->
+<title>Digital Clock</title>
+<script>                 // js代码
+// 定义一个函数用以显式当前时间
+function displayTime(){
+    var elt = document.getElementById("clock"); // 通过id="clock"查找元素
+    var now = new Date();                       // 得到当前时间
+    elt.innerHTML = now.toLocaleTimeString();   // 让elt来显示它
+    setTimeout(displayTime, 1000);              // 在1s后再次执行
+}
+
+window.onload = displayTime;                    // 当onload事件发生时开始显示时间
+</script>
+<style>                          /* 钟表样式 */
+#clock {                         /* 定义id="clock"的元素的样式 */
+    font: bold 24pt sans;        /* 粗号大字体 */
+    background: #ddf;          /* 蓝灰色背景 */
+    padding: 10px;               /* 周围有一圈空白 */
+    border: solid black 2px;   /* 纯黑色边框 */
+    border-radius: 10px;         /* 圆角边框 */
+}
+</style>
+</head>
+
+<body>                      <!-- body部分是用来显示文档的 -->
+<h1>Digital Clock</h1>      <!-- 显示标题 -->
+<span id="clock"></span>    <!-- 输出时钟 -->
+
+<hr>
+<a href="javascript:new Date().toLocaleTimeString();">What time is it?</a>
+<a href="javascript:alert(new Date().toLocaleString());">检查时间，而不必覆盖整个文档</a>
+<a href="javascript:void window.open('about:blank');">打开一个窗口</a>
+<a href="javascript:window.open('about:blank');">无void 打开一个窗口</a>
+<a href='javascript:
+  var e="",r="";   /*需要计算的表达式和结果*/
+  do{
+    /*输出表达式和结果，并要求输入新的表达式*/
+    e=prompt("expression: "+e+"\n"+r+"\n",e);
+    try{r="result: "+eval(e);} /*尝试计算这个表达式*/
+    catch(ex){r=ex;}   /*否则记住这个错误*/
+  }while(e);   /*知道没有输入表达式或者单击取消按钮才会停止，否则一直执行*/
+  void 0;   /*防止当前文档被覆盖*/
+'>
+javascript evaluator
+</a>
+</body>
+
+</html>
