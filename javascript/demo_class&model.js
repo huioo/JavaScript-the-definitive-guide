@@ -2149,5 +2149,8 @@ StringSet.prototype = Object.create(AbstractWritableSet, {
  * JavaScript中并没有定义用以支持模块的语言结构（但imports和exports的确是JavaScript保留的关键字，因此JavaScript的未来版本
  * 可能会支持），这也意味着在JavaScript中编写模块化的代码更多的是遵循某一种编码约定。
  * 
- * 
+ * https://segmentfault.com/a/1190000015302578
+ * http://www.ruanyifeng.com/blog/2015/05/require.html
+ * http://javascript.ruanyifeng.com/nodejs/module.html
+ * https://nodejs.org/api/modules.html#modules_all_together
  */

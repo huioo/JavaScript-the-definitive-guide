@@ -798,10 +798,12 @@ g(2)                                // 2
 
 // 可以通过以下方式实现这种绑定
 function bind(f, o) {
-    if (f.bind) return f.bind(o);
-    else return function(){
-        return f.apply(o, arguments);
-    }
+    if (f.bind) 
+        return f.bind(o);
+    else
+        return function(){
+            return f.apply(o, arguments);
+        }
 }
 
 /**
