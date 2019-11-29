@@ -116,6 +116,7 @@
  * <script type="text/vbscript">
  * // 这里是VBScript代码
  * </script>
+ * 
  * type属性的默认值是“text/javascript”。如果需要，可以显式指定此类型，但完全没必要。老的浏览器可能会改用language属性替代type属性，
  * 这种情况也会经常看到：
  * <script language="javascript">
