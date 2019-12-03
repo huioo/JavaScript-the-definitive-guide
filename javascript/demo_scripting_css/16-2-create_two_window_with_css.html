@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="keywords" content="JavaScript权威指南，第二部分，客户端JavaScript，第16章，脚本化CSS，重要的CSS属性，示例：重叠半透明窗口">
+    <meta name="description" content="用CSS在浏览器窗口中创建滚动、重叠和半透明的视觉效果">
+
+    <title>用CSS显示窗口</title>
+    <style type="text/css">
+    div.window {
+        /*指定窗口的尺寸和边框*/
+        position: absolute;
+        width: 300px;  /*窗口尺寸不含边框*/
+        height: 200px;
+        border: 3px outset gray; /*3D "outset" 边框效果*/
+    }
+    div.titlebar {
+        /*指定标题栏的定位、尺寸和样式*/
+        position: absolute;
+        top: 0px;
+        width: 290px;  /*实际宽度：290 + 2*5 px 左右内边距 = 300px*/
+        height: 18px;  /*实际高度：18 + 3 + 2 px 上下内边距 + 2 px下边框= 25px*/
+        padding: 3px 5px 2px 5px;
+        border-bottom: groove gray 2px;  /*标题栏只有底部边框*/
+        background-color: #aaa;  /*背景颜色*/
+        font: bold 11pt sans-serif;  /*标题栏字体*/
+    }
+    div.content {
+        /*指定窗口内容的尺寸、定位和滚动*/
+        position: absolute;
+        top: 25px;   /*18px标题 + 2px底部边框 + 3px + 2px 内边距*/
+        height: 165px;   /*200px - 25px标题栏 - 2*5px内边距*/
+        width: 290px;   /*300px - 2*5px内边距*/
+        padding: 5px;
+        overflow: auto;   /*如果需要显示滚动条*/
+        background-color: #fff;  /*默认白色背景*/
+    }
+    div.translucent {
+        opacity: .75;   /*透明度标准样式*/
+        filter: alpha(opacity=75); /*IE的透明度*/
+    }
+    </style>
+</head>
+<body>
+<!-- 定义一个窗口：“window” div有一个标题栏div和其内是一个内容div。 -->
+<div class="window">
+    <div class="titlebar">Test Window</div>
+    <div class="content">
+        <!-- 若干行，展示滚动 -->
+        1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>0<br/>
+        1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>0<br/>
+    </div>
+</div>
+
+<!-- 定义另一个窗口：用不同的定位、颜色和字体重量 -->
+<div class="window" style="left: 75px; top: 110px; z-index: 20;"> 
+    <div class="titlebar">Another Window</div>
+    <div class="content translucent" style="background-color: #ccc; font-weight: bold;">
+        This is an another window. Its <tt>z-index</tt> puts it on top of the other one.
+        CSS style make its content area translucent, in browsers that support that.
+    </div>
+</div>
+</body>
+</html>

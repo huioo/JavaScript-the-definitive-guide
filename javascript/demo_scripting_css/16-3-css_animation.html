@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="keywords" content="JavaScript权威指南，第二部分，客户端JavaScript，第16章，脚本化CSS，脚本化内联样式，示例：css动画">
+    <meta name="description" content="">
+
+    <title>CSS动画</title>
+    <style type="text/css">
+    /* CSS3实现逐渐消失 */
+    .fadeable {transition: opacity .5s ease-in-out;}
+    </style>
+
+</head>
+<body>
+<p style="color: lightblue;">测试文本</p>
+<button id="shake">shake</button>
+<button id="fadeOut">fadeOut</button>
+<button onclick="shake(this, fadeOut)">shake and fadeOut</button>
+<button id="reset">reset</button>
+
+
+<script>
+/*
+ * shake() 将元素从一边到另一边快速移动或“震动”，例如，当输入无效的数据时，它吸引用户的注意。
+ * fadeOut() 通过指定的时间（默认500毫秒）降低元素的不透明度，使元素淡出和消失。
+ */
+
+// 将e转化为相对定位的元素，使之左右“震动”
+// 第一个参数可以是元素对象或者元素的id
+// 第二个参数，如果是函数，以e为参数，它将在动画结束时调用
+// 第三个参数，指定e震动的距离，默认5px
+// 第四个参数，指定震动多久，默认500毫秒
+var shake = (function(){
+    var h, originalStyle;
+    return function(e, oncomplete, distance, time) {
+        // 句柄参数
+        if (typeof e === "string") e = document.getElementById(e);
+        if (!distance) distance = 5;
+        if (!time) time = 500;
+
+        // 重复执行，消除定时任务
+        if (h) clearTimeout(h);
+        // 保存e的原始style；
+        // 使用 “!originalStyle” 判断时，第一次赋值为空字符串，
+        // 当第二次执行时，因为originalStyle为空字符串，所以会再次赋值，此时originalStyle的值不是空字符串，改变元素e的原始style
+        if (originalStyle == null) originalStyle = e.style.cssText;
+
+        e.style.position = "relative";        // 使e相对定位
+        var start = (new Date()).getTime();   // 动画开始时间
+        animate();                            // 动画开始
+    
+        // 函数检查消耗的时间，并更新e的位置
+        // 如果动画完成，将e还原为原始状态
+        // 否则，它更新e的位置，安排它自身重新运行
+        function animate() {
+            var now = (new Date()).getTime();
+            var elapsed = now - start;        // 消耗时长
+            var fraction = elapsed/time;      // 是总时间的几分之几
+            
+            if (fraction < 1) {
+                // 动画未完成
+                // 作为动画完成比例的函数，计算e的x位置
+                // 使用正弦函数将完成比例乘以4pi
+                // 所以，它来回往复两次
+                var x = distance * Math.sin(fraction * 4 * Math.PI);
+                e.style.left = x + "px";
+    
+                // 25毫秒后后总时间的最后尝试再次运行函数
+                // 目的是为了产生每秒40帧的动画
+                h = setTimeout(animate, Math.min(25, time - elapsed));
+            }
+            else {
+                // 动画完成
+                e.style.cssText = originalStyle;   // 恢复原始样式
+                if (oncomplete) oncomplete(e);     // 调用完成后的回调函数+
+                h = undefined;
+            }
+        }
+    }
+}());
+
+
+// 以毫秒级的时间将e从完全不透明淡出到完全透明
+// 在调用函数时假设e是完全不透明的
+// oncomplete是一个可选的函数，以e为参数，它将在动画结束时调用
+// 如果不指定time，默认为500毫秒
+// 该函数在IE中不能正常工作，但也可以修改得可以工作
+// 除了opacity，IE使用非标转的filter属性
+var fadeOut = (function(){
+    var h, originalStyle;
+    return function(e, oncomplete, time) {
+        // 句柄参数
+        if (typeof e === "string") e = document.getElementById(e);
+        if (!time) time = 500;
+        
+        // 重复执行，消除定时任务
+        if (h) clearTimeout(h);
+        // 保存e的原始style；
+        if (originalStyle == null) originalStyle = e.style.cssText;
+
+        // 使用Math.sqrt作为一个简单的“缓动函数”来创建动画
+        // 精巧的非线性，一开始淡出的比较快，然后缓慢了一些
+        var ease = Math.sqrt;
+
+        var start = (new Date()).getTime();
+        animate();
+        
+        function animate() {
+            var now = (new Date()).getTime();
+            var elapsed = now - start;
+            var fraction = elapsed / time;
+            if (fraction < 1) {
+                var opacity = 1 - ease(fraction);
+                e.style.opacity = String(opacity);
+                h = setTimeout(animate, Math.min(25, time-elapsed));
+                console.log(h);
+            }
+            else {
+                e.style.opacity = "0";
+                if (oncomplete) oncomplete(e);
+                h = undefined;
+            }
+        }
+    }
+}());
+
+
+window.onload = function(){
+    var target = document.getElementsByTagName("p")[0];
+    var shakeButton = document.getElementById("shake");
+    shakeButton.onclick = function() {
+        shake(target, undefined, 20, 4000);
+    };
+
+    var fadeOutButton = document.getElementById("fadeOut");
+    fadeOutButton.onclick = function() {
+        fadeOut(target, undefined, 2000);
+    };
+
+    var resetButton = document.getElementById("reset");
+    resetButton.onclick = (function() {
+        var originalStyle = target.style.cssText;
+        return function(){
+            target.style.cssText = originalStyle;
+        }
+    }());
+};
+
+</script>
+</body>
+
+</html>

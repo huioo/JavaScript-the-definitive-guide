@@ -62,7 +62,7 @@ text.match(/\d+/);                             // ["1", index: 0, input: "1 plus
 var URL = /(\w+):\/\/([\w.]+)\/(\S*)/;
 var text = "Visit my blog at http://www.example.com/~david";
 var result = text.match(URL);
-// [
+// [  0
 //     "http://www.example.com/~david", "http", "www.example.com", "~david", 
 //     index: 17, input: "Visit my blog at http://www.example.com/~david", groups: undefined
 // ]

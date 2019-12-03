@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>一个应用了CSS的Web页面</title>
+
+<style type="text/css">
+/* 指定标题文本显示为蓝色、斜体 */
+h1,h2 {
+    color: blue;
+    font-style: italic;
+}
+/*
+ * 任何class="WARNING"的元素显示为大号、加黑文本
+ * 它有很宽的外边距、黄色背景、宽红色边框
+ */
+.WARNING {
+    font-weight: bold;
+    font-size: 150%;
+    margin: 0 1in 0 1 in;
+    background-color: yellow;
+    border: solid red 8px;
+    padding: 10px;
+}
+/*
+ * class="WARNING"的元素里面的h1或h2标签内的文本，除了蓝色，还应该居中显示
+ */
+.WARNING h1, .WARNING h2 {
+    text-align: center;
+}
+/* id="special"的元素大写、居中显示 */
+#special {
+    text-align: center;
+    text-transform: uppercase;
+}
+</style>
+</head>
+
+<body>
+<h1>Cascading Style Sheet Demo</h1>
+
+<div class="WARNING">
+    <h2>Warning</h2>
+    <p>This is a warning!</p>
+    <p>Notice how it grabs your attention with its bold text and bright colors.</p>
+    <p>Also notice that the heading is centered and in blue italic.</p>
+</div>
+
+<p id="special">
+    This paragraphy is centered<br/>
+    and appears in uppercase letters.<br/>
+    <span style="text-transform: none">
+    Here we explicitly use an inline style to override the uppercase letters.
+    </span>
+</p>
+</body>
+</html>
