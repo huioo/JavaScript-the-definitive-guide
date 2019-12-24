@@ -163,9 +163,10 @@ jQuery(function($) {             // 让$成为jQuery对象的局部别名
 /**
  * 获取和设置HTML属性
  * 
- * attr()方法，用于HTML属性的getter/setter，它符合上面描述的概要理解中的每一条。attr()处理浏览器的兼容性和一些特殊情况，还让HTML属性名和JavaScript属性名可以
- * 等同使用（当二者存在差异时）。
- * 例如，可以使用“for”也可以使用“htmlFor”，可以使用“class”也可以使用“className”。一个相关函数是removeAttr()，可用来从所有选中元素中移除某个属性。
+ * attr()方法，用于HTML属性的getter/setter，它符合上面描述的概要理解中的每一条。
+ * attr()处理浏览器的兼容性和一些特殊情况，还让HTML属性名和JavaScript属性名可以等同使用（当二者存在差异时）。
+ * 例如，可以使用“for”也可以使用“htmlFor”，可以使用“class”也可以使用“className”。
+ * 一个相关函数是removeAttr()，可用来从所有选中元素中移除某个属性。
  */
 $("form").attr("action");                  // 获取第一个form元素的action属性
 $("#icon").attr("src", "icon.gif");        // 设置src属性
@@ -215,4 +216,134 @@ $("h1").css("font-size", function(i, curval) {
  * addClass()和removeClass()用来从选中元素中添加和删除类。
  * toggleClass()的用途是，当元素还没有某些类时，给元素添加这些类；反之，则删除。
  * hasClass()用来判断某类是否存在。
+ * 
+ * 注意：hasClass()不如addClass()、removeClass()、toggleClass()灵活。
+ * hasClass()只能接受单个类名作为参数，并且不支持函数参数。当选中元素中的任意元素有指定CSS类时，hasClass()返回true；如果任何元素都没有，则返回false。
+ * 19.1.2节描述的is()方法更灵活，可用来做同样的事。
+ * 
+ * jQuery的这些方法和16.5节讲的classList方法类似，只是jQuery的方法可以工作在所有浏览器中，而不仅仅是那些支持HTML5 classList属性的浏览器。
+ * 此外，毫无疑问，jQuery的方法可以操作多个元素并支持链式调用。
  */
+// 添加CSS类
+$("h1").addClass("hilite");                 // 给所有<h1>元素添加一个类
+$("h1+p").addClass("hilite first");         // 给<h1>后面的<p>添加两个类
+$("section").addClass(function(n) {         // 传递一个函数用来给匹配的
+    return "section" + n;                   // 每一个元素添加自定义类
+});
+
+// 删除CSS类
+$("p").removeClass("hilite");               // 从所有<p>元素中删除一个类
+$("p").removeClass("hilite first");         // 允许一次删除多个类
+$("section").removeClass(function(n) {      // 从元素中删除自定义类
+    return "section" + n;
+});
+$("div").removeClass();                     // 删除所有<div>中的所有类
+
+// 切换CSS类
+$("tr:odd").toggleClass("oddrow");          // 如果该类不存在则添加，反之，删除
+$("h1").toggleClass("big blod");            // 一次切换两个类
+$("h1").toggleClass(function(n) {           // 切换用函数计算出来的类
+    return "big blod h1-" + n;
+});
+$("h1").toggleClass("hilite", true);        // 作用类似addClass
+$("h1").toggleClass("hilite", false);       // 作用类似removeClass
+
+// 检测CSS类
+$("p").hasClass("first");                   // 是否所有<p>元素都有该类
+$("#lead").is(".first");                    // 功能和上面类似
+$("#lead").is(".first.hilite");             // is()比hasClass更灵活
+
+/**
+ * 获取和设置HTML表单值
+ * 
+ * val()方法用来设置和获取HTML表单元素的value属性，还可用于获取和设置复选框，单选框以及<select>元素的选中状态
+ */
+$("#surname").val();                        // 获取 surname 文本域的值
+$("#usstate").val();                        // 从 <select> 中获取单一值
+$("select#extras").val();                   // 从 <select multiple> 中获取一组值
+
+$("input:radio[name=ship]:checked").val();  // 获取选中的单选按钮的值
+$("#email").val("Invalid email address");   // 给文本域设置值
+
+$("input:checkbox").val(["opt1", "opt2"]);  // 选中带有这些名字或值的复选框
+$("input:text").val(function() {            // 重置所有文本域为默认值
+    return this.defaultValue;
+});
+
+/**
+ * 获取和设置元素内容
+ * 
+ * text()和html()方法用来获取和设置元素的纯文本或HTML内容。
+ * 当不带参数调用时，text()返回所有匹配元素的所有子孙文本节点的纯文本内容。该方法甚至可以工作在不支持textContent或innerText属性（参考15.5.2节）的浏览器中。
+ * 如果不带参数调用html()方法，它会返回第一个匹配元素的HTML内容。jQuery使用innerHTML属性来实现：x.html()和x[0].innerHTML一样高效。
+ * 
+ * 如果传入字符串给text()或html()，该字符串会用做该元素的纯文本或格式化的HTML文本内容，它会替换掉所有存在的内容。和其他setter方法一样，我们可以传入函数，该函数
+ * 用来计算出表示新内容的字符串。
+ */
+var title = $("head title").text();         // 获取文档标题
+var headline = $("h1").html();              // 获取第一个<h1>元素的html
+$("h1").text(function(n, current) {         // 给每一个标题添加章节号
+    return "§" + (n+1) + ": " + current;
+});
+
+/**
+ * 获取和设置元素的位置高宽
+ * 
+ * 在15.8节中我们知道通过一些技巧可以正确获取元素的大小和位置，尤其当浏览器不支持 getBoundingClientRect() （参考15.8.2节） 时。使用jQuery方法可以更简单地获取元素的
+ * 大小和位置，并兼容所有浏览器。注意，本节描述的所有方法都是getter，只有少部分可用作setter。
+ * 
+ * offset()，获取或设置元素的位置。该方法相对文档来计算位置值，返回一个对象，带有left和top属性，用来表示X和Y坐标。如果传入带有这些属性的对象给该方法，它会给元素设置
+ * 指定的位置。在必要的时候，会设置CSS position属性来使得元素可定位。
+ */
+var elt = $("#sprite");                     // 获取需要移动的元素
+var position = elt.offset();                // 获取当前位置
+position.top += 100;                        // 改变Y坐标
+elt.offset(position);                       // 设置新位置
+// 将所有 <h1> 元素向右移动，移动的距离取决于它们在文档中的位置
+$("h1").offset(function(index, curpos) {
+    return {left: curpos.left + 25*index, top: curpos.top};
+});
+/**
+ * position()方法很像offset()方法，但它只能用作getter，它返回的元素位置是相对于其偏移父元素的，而不是相对与文档的。在15.8.5节中，我们知道任何元素都有一个offsetParent
+ * 属性，其位置是相对的。定位元素总会当作其子孙元素的偏移父元素，但在某些浏览器下，也会把表格单元等其他元素当成偏移父元素。jQuery只会把定位元素作为偏移父元素，jQuery
+ * 对象的offsetParent()方法则会把每个元素映射到最近的定位祖先元素或<body>元素。注意这些方法的名字并不很恰当：offset()返回元素的绝对位置，其相对于文档的坐标来表示。
+ * 而position()则返回相对于元素的offsetParent()的偏移量。
+ * 
+ * 用于获取元素宽度的getter有3个，获取高度的也有3个。
+ * width()和height()方法返回基本的宽度和高度，不包含内边距、边框、外边距。
+ * innerWidhth()和innerHeight()返回元素的宽度和高度，包含内边距的宽度和高度（“内”表示这些方法度量的是边框以内的尺寸）。
+ * outerWidth()和outerHeight()通常返回的是包含元素内边距和边框的尺寸。如果两个方法中的任意一个传入true值，它们还可以返回包含元素外边距的尺寸。
+ */
+var body = $("body");
+var contentWidth = body.width();
+var paddingWidth = body.innerWidth();
+var borderWidth = body.outerWidth();
+var marginWidth = body.outerWidth(true);
+
+var padding = paddingWidth - contentWidth;  // 左内边距和右内边距的和
+var borders = borderWidth - paddingWidth;   // 左边框和右边框的和
+var margins = marginWidth - borderWidth;    // 左外边框和右外边框的和
+/**
+ * width()和height()方法拥有其他4个方法（以inner和outer开头的方法）所没有的特性。首选，当jQuery对象的第一个元素是Window是Document对象时，width()和height()返回的
+ * 是窗口的视口大小或文档的整体尺寸。其他方法只适用于元素，不适用于窗口和文档。
+ * 
+ * 另一个特性是width()和height()方法可以是setter也可以是getter。如果传递值给这些方法，它们会给jQuery对象中的每一个元素设置宽度和高度。（注意：不能给Window和Document
+ * 对象设置宽度或高度。）如果传入数值，会把它当成单位为像素的尺寸。如果传入字符串，会把它用作CSS的width和height属性值，因此可以使用任何CSS单位。
+ * 
+ * 最后，和其他setter类似，可以传入函数，用来计算要设置的宽度或高度。
+ * 
+ * 在width()和height()的getter和setter行为之间有个小的不对称。用作getter时，这些方法返回元素的内容盒子的尺寸，不包括内边距、边框和外边距。用作setter时，它们只是简单
+ * 的设置CSS的width和height属性。默认情况下，这些属性也指定内容盒子的大小。但是，如果一个元素的CSS box-sizing属性设置为border-box，则width()和height()方法设置的
+ * 尺寸包括内边距和边框。对于使用content-box作为盒模型的元素e，调用 $(e).width(x).width 返回x值。然而，对于使用border-box模型的元素，这种情况下一般不会返回x值。
+ * 
+ * 与位置尺寸相关的最后一对jQuery方法是scrollTop()和scrollLeft()，可获取和设置元素的滚动条位置。这些方法可用在Window对象以及Document元素上，当用在Document对象上时，
+ * 会获取或设置存放该Document的Window对象的滚动位置。与其他setter不同，不可传递函数给scrollTop()或scrollLeft()。
+ * 可使用scrollTop()或scrollLeft()作为getter和setter，与height()方法一起，来定义一个方法：根据指定的页面数向上或向下滚动窗口。
+ */
+function page(n) {
+    var w = $(window);                     // 将Window对象封装成jQuery对象
+    var pagesize = w.height();             // 得到页面的大小
+    var current = w.scrollTop();           // 得到当前滚动条的位置
+    w.scrollTop(current + n * pagesize);   // 设置新的滚动条位置
+}
+
